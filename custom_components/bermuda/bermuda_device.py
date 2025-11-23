@@ -753,7 +753,30 @@ class BermudaDevice(dict):
         # ==== Check service uuids (type 0x16)
         _want_name_update = False
         for uuid in advert.service_uuids:
-            name, generic = self._coordinator.get_manufacturer_from_id(uuid[4:8])
+            # Extract UUID short form - try both full UUID format and short format
+            uuid_str = str(uuid).upper()
+            _LOGGER.debug(
+                "Processing service UUID for %s: full='%s', extracting uuid[4:8]='%s'",
+                self.address,
+                uuid_str,
+                uuid_str[4:8] if len(uuid_str) > 8 else uuid_str,
+            )
+
+            # Try to extract the 16-bit UUID from the full format
+            if len(uuid_str) >= 8:
+                uuid_short = uuid_str[4:8]
+            else:
+                uuid_short = uuid_str
+
+            name, generic = self._coordinator.get_manufacturer_from_id(uuid_short)
+            if name:
+                _LOGGER.debug(
+                    "Service UUID %s identified as %s (generic=%s) for %s",
+                    uuid_short,
+                    name,
+                    generic,
+                    self.address,
+                )
             # We'll use the name if we don't have one already, or if it's non-generic.
             if name and (self.manufacturer is None or not generic):
                 self.manufacturer = name
