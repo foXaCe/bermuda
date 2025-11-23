@@ -54,13 +54,13 @@
         "title": "Select Devices",
         "description": "{filter_help}\n\nChoose which devices you wish to track. If no devices appear below, then Bermuda is not seeing any data coming from Bluetooth scanners. Ensure you have an esphome ble_proxy device, Shelly devices with bluetooth proxy configured or a local bluetooth adaptor.",
         "data": {
-          "device_filter": "Filter by name, MAC or manufacturer",
+          "device_filter": "Search devices",
           "ibeacon_devices": "iBeacon devices",
           "standard_devices": "Standard BLE devices",
           "random_devices": "Random MAC devices"
         },
         "data_description": {
-          "device_filter": "Type to filter the list (e.g., 'tile', 'apple', 'AA:BB'). Leave empty to see all devices.",
+          "device_filter": "Type in the search box and click Submit to filter. Search by name (e.g., 'tile'), MAC address (e.g., 'd8f2'), or manufacturer (e.g., 'apple').",
           "ibeacon_devices": "iBeacon devices (iOS, Android with HA App, etc.)",
           "standard_devices": "Standard BLE devices (Tiles, trackers, sensors, etc.)",
           "random_devices": "Devices with random MAC addresses"

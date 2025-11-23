@@ -19,9 +19,11 @@ from homeassistant.helpers.selector import (
     SelectSelectorConfig,
     SelectSelectorMode,
     TextSelector,
+    TextSelectorConfig,
 )
 
 from .const import (
+    _LOGGER,
     ADDR_TYPE_IBEACON,
     ADDR_TYPE_PRIVATE_BLE_DEVICE,
     BDADDR_TYPE_RANDOM_RESOLVABLE,
@@ -236,6 +238,11 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
 
     async def async_step_selectdevices(self, user_input=None):
         """Handle a flow initialized by the user."""
+        _LOGGER.debug("=" * 80)
+        _LOGGER.debug("SELECTDEVICES - Starting step")
+        _LOGGER.debug("user_input: %s", user_input)
+        _LOGGER.debug("=" * 80)
+
         if user_input is not None:
             # Check if user submitted device selections (not just filtering)
             selected_devices = []
@@ -243,22 +250,22 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
             selected_devices.extend(user_input.get("standard_devices", []))
             selected_devices.extend(user_input.get("random_devices", []))
 
-            # If we have device selections, save and exit
-            if selected_devices or (
-                "ibeacon_devices" in user_input
-                or "standard_devices" in user_input
-                or "random_devices" in user_input
-            ):
+            # If we have actual device selections (not empty lists), save and exit
+            if selected_devices:
                 # User is submitting final selection
+                _LOGGER.debug("Saving device selection: %s", selected_devices)
                 self.options[CONF_DEVICES] = selected_devices
                 return await self._update_options()
             # Otherwise, user is just filtering - continue to re-show form
+            _LOGGER.debug("No devices selected, re-showing form with filter")
 
         # Grab the co-ordinator's device list so we can build a selector from it.
         self.devices = self.config_entry.runtime_data.coordinator.devices
 
-        # Get filter text if it exists
+        # Get search text if it exists
         filter_text = user_input.get("device_filter", "").lower() if user_input else ""
+
+        _LOGGER.debug("Search filter applied: '%s'", filter_text)
 
         # Where we store the options before building the selector
         options_list = []
@@ -282,10 +289,10 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
                 # Private BLE Devices get configured automagically, skip
                 continue
 
-            # Build the full label for filtering
+            # Build the full label for text filtering
             full_label = f"{device.address.upper()} {name} {device.manufacturer or ''}"
 
-            # Apply filter if present
+            # Apply text search filter if present
             if filter_text and filter_text not in full_label.lower():
                 continue
 
@@ -375,54 +382,91 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
 
         if show_pagination_warning:
             description_text += (
-                f"⚠️ *Too many devices! Showing first {MAX_DEVICES_PER_CATEGORY} per category. "
-                "Use the filter below to find specific devices.*\n\n"
+                f"⚠️ *Too many devices! Showing first {max_devices_per_category} per category. "
+                "Use the filters below to narrow down the list.*\n\n"
             )
 
+        if filter_text:
+            description_text += f"🔍 **Filtering by:** '{filter_text}'\n\n"
+
         description_text += (
-            "💡 **Tip:** Use the filter to search by MAC address, device name, or manufacturer "
-            "(e.g., 'tile', 'apple', 'AA:BB', etc.)"
+            "💡 **Search:** Type in the search box and click Submit to filter. "
+            "Search by name (e.g., 'tile'), MAC address (e.g., 'd8f2'), or manufacturer (e.g., 'apple')."
         )
 
-        # Build the form schema with filter field and grouped selectors
-        data_schema = {
-            vol.Optional(
-                "device_filter",
-                default=filter_text,
-                description={"suggested_value": filter_text},
-            ): TextSelector(),
-        }
+        # Build the form schema with search field
+        _LOGGER.debug("Building form schema with search field")
+
+        try:
+            data_schema = {
+                vol.Optional(
+                    "device_filter",
+                    default=filter_text,
+                    description={"suggested_value": filter_text},
+                ): TextSelector(TextSelectorConfig(type="search")),
+            }
+            _LOGGER.debug("Form schema created successfully")
+        except Exception as ex:
+            _LOGGER.error("Error creating form schema: %s", ex, exc_info=True)
+            raise
 
         # Add grouped selectors by device type
         if options_metadevices:
-            data_schema[vol.Optional(
-                "ibeacon_devices",
-                default=[d for d in self.options.get(CONF_DEVICES, [])
-                        if any(opt["value"] == d.upper() for opt in options_metadevices)],
-                description="iBeacon devices (iOS, Android with HA App, etc.)",
-            )] = SelectSelector(SelectSelectorConfig(options=options_metadevices, multiple=True))
+            data_schema[
+                vol.Optional(
+                    "ibeacon_devices",
+                    default=[
+                        d
+                        for d in self.options.get(CONF_DEVICES, [])
+                        if any(opt["value"] == d.upper() for opt in options_metadevices)
+                    ],
+                    description="iBeacon devices (iOS, Android with HA App, etc.)",
+                )
+            ] = SelectSelector(SelectSelectorConfig(options=options_metadevices, multiple=True))
 
         if options_otherdevices:
-            data_schema[vol.Optional(
-                "standard_devices",
-                default=[d for d in self.options.get(CONF_DEVICES, [])
-                        if any(opt["value"] == d.upper() for opt in options_otherdevices)],
-                description="Standard BLE devices (Tiles, trackers, sensors, etc.)",
-            )] = SelectSelector(SelectSelectorConfig(options=options_otherdevices, multiple=True))
+            data_schema[
+                vol.Optional(
+                    "standard_devices",
+                    default=[
+                        d
+                        for d in self.options.get(CONF_DEVICES, [])
+                        if any(opt["value"] == d.upper() for opt in options_otherdevices)
+                    ],
+                    description="Standard BLE devices (Tiles, trackers, sensors, etc.)",
+                )
+            ] = SelectSelector(SelectSelectorConfig(options=options_otherdevices, multiple=True))
 
         if options_randoms:
-            data_schema[vol.Optional(
-                "random_devices",
-                default=[d for d in self.options.get(CONF_DEVICES, [])
-                        if any(opt["value"] == d.upper() for opt in options_randoms)],
-                description="Devices with random MAC addresses",
-            )] = SelectSelector(SelectSelectorConfig(options=options_randoms, multiple=True))
+            data_schema[
+                vol.Optional(
+                    "random_devices",
+                    default=[
+                        d
+                        for d in self.options.get(CONF_DEVICES, [])
+                        if any(opt["value"] == d.upper() for opt in options_randoms)
+                    ],
+                    description="Devices with random MAC addresses",
+                )
+            ] = SelectSelector(SelectSelectorConfig(options=options_randoms, multiple=True))
 
-        return self.async_show_form(
-            step_id="selectdevices",
-            data_schema=vol.Schema(data_schema),
-            description_placeholders={"filter_help": description_text},
+        _LOGGER.debug(
+            "Showing form with %d ibeacon, %d standard, %d random devices",
+            len(options_metadevices),
+            len(options_otherdevices),
+            len(options_randoms),
         )
+        _LOGGER.debug("=" * 80)
+
+        try:
+            return self.async_show_form(
+                step_id="selectdevices",
+                data_schema=vol.Schema(data_schema),
+                description_placeholders={"filter_help": description_text},
+            )
+        except Exception as ex:
+            _LOGGER.error("Error showing form: %s", ex, exc_info=True)
+            raise
 
     async def async_step_calibration1_global(self, user_input=None):
         # FIXME: This is ridiculous. But I can't yet find a better way.
