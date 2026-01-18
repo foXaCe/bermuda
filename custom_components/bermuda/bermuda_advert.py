@@ -204,7 +204,7 @@ class BermudaAdvert(dict):
             self.hist_stamp.insert(0, self.stamp)
 
         # if self.tx_power is not None and scandata.advertisement.tx_power != self.tx_power:
-        #     # Not really an erorr, we just don't account for this happening -
+        #     # Not really an error, we just don't account for this happening -
         #     # I want to know if it does.
         #     # AJG 2024-01-11: This does happen. Looks like maybe apple devices?
         #     # Changing from warning to debug to quiet users' logs.
@@ -343,7 +343,7 @@ class BermudaAdvert(dict):
 
         This is called by self.update, but should also be called for
         any remaining scanners that have not sent in an update in this
-        cycle. This is mainly beacuse usb/bluez adaptors seem to flush
+        cycle. This is mainly because usb/bluez adaptors seem to flush
         their advertisement lists quicker than we time out, so we need
         to make sure we still update the scanner entry even if the scanner
         no longer carries advert history for this device.
