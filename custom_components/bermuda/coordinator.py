@@ -250,7 +250,7 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
 
         if hasattr(entry, "options"):
             # Firstly, on some calls (specifically during reload after settings changes)
-            # we seem to get called with a non-existant config_entry.
+            # we seem to get called with a non-existent config_entry.
             # Anyway... if we DO have one, convert it to a plain dict so we can
             # serialise it properly when it goes into the device and scanner classes.
             for key, val in entry.options.items():
@@ -329,11 +329,11 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
 
         - uuid must be four hex chars in a string, or an `int`
 
-        Retreives the manufacturer name from the Bluetooth SIG Member UUID listing,
+        Retrieves the manufacturer name from the Bluetooth SIG Member UUID listing,
         using a cached copy of https://bitbucket.org/bluetooth-SIG/public/src/main/assigned_numbers/uuids/member_uuids.yaml
 
         HOWEVER: Bermuda adds some opinionated overrides for the benefit of user clarity:
-        - Legal entity names may be overriden with well-known brand names
+        - Legal entity names may be overridden with well-known brand names
         - Special-use prefixes may be tagged as such (eg iBeacon etc)
         - Generics can be excluded by setting exclude_generics=True
         """
@@ -591,6 +591,7 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
             {
                 "name": scannerdev.name,
                 "address": scannerdev.address,
+                "area_name": scannerdev.area_name,
                 "last_stamp": scannerdev.last_seen,
                 "last_stamp_age": stamp - scannerdev.last_seen,
             }
@@ -810,7 +811,7 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
             # We just collect the addresses first, and do the pruning after exiting this iterator
             #
             # Reduced selection criteria - basically if if's not:
-            # - a scanner (beacuse we need those!)
+            # - a scanner (because we need those!)
             # - any metadevice less than 15 minutes old (PRUNE_TIME_KNOWN_IRK)
             # - a private_ble device (because they will re-create anyway, plus we auto-sensor them
             # - create_sensor
@@ -1132,7 +1133,7 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
                     # Note that this won't quick-away devices that change their MAC at the
                     # same time as changing their uuid (like manually altering the beacon
                     # in an Android 15+), since the old source device will still be a match.
-                    # and will be subject to the nomal DEVTRACK_TIMEOUT.
+                    # and will be subject to the normal DEVTRACK_TIMEOUT.
                     #
                     _LOGGER.debug(
                         "Source %s for metadev %s changed iBeacon identifiers, severing", source_device, metadevice
@@ -1347,22 +1348,16 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
                 continue
 
             # If we are too far away or don't have an area, we cannot win...
-            if (
-                challenger.rssi_distance is None
-                or challenger.rssi_distance > _max_radius
-                or challenger.area_id is None
-            ):
+            if challenger.rssi_distance is None or challenger.rssi_distance > _max_radius or challenger.area_id is None:
                 continue
 
-            # At this point the challenger is a vaild contender...
+            # At this point the challenger is a valid contender...
 
             # Is the incumbent a valid contender?
 
             # If closest scanner lacks critical data, we win.
             if (
-                incumbent is None
-                or incumbent.rssi_distance is None
-                or incumbent.area_id is None
+                incumbent is None or incumbent.rssi_distance is None or incumbent.area_id is None
                 # Extra checks that are redundant but make linting easier later...
                 # or closest_advert.hist_distance_by_interval is None
             ):
@@ -1433,8 +1428,12 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
             pdiff_historical = 0.15  # Percentage difference required to win on historical test
             if len(challenger.hist_distance_by_interval) > min_history:  # we have enough history, let's go..
                 tests.hist_min_max = (
-                    min(incumbent.hist_distance_by_interval[:history_window]),  # The closest that the incumbent has been
-                    max(challenger.hist_distance_by_interval[:history_window]),  # The **furthest** we have been in that time
+                    min(
+                        incumbent.hist_distance_by_interval[:history_window]
+                    ),  # The closest that the incumbent has been
+                    max(
+                        challenger.hist_distance_by_interval[:history_window]
+                    ),  # The **furthest** we have been in that time
                 )
                 if (
                     tests.hist_min_max[1] < tests.hist_min_max[0]

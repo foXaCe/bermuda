@@ -19,7 +19,7 @@ ignore = [
     "ERA001",  # commented out code
     "D401",    # First line should be in imperative - let's skip for now
     "D205",    # 1 blank line required between summary line and description
-    "ANN001",  # Return type annoations - should be done later as lot of manual changes
+    "ANN001",  # Return type annotations - should be done later as lot of manual changes
     "ANN003",  # Type annotation for **kwargs
     "PGH004",  # Use specific rule codes for noqa
     "D102",    # Docstring in public method - should be done later
@@ -121,3 +121,7 @@ voluptuous = "vol"
 "homeassistant.helpers.issue_registry" = "ir"
 "homeassistant.helpers.label_registry" = "lr"
 "homeassistant.util.dt" = "dt_util"
+
+[tool.bandit]
+exclude_dirs = ["tests", "config"]
+skips = ["B101"]  # Skip assert_used check (common in HA integrations)
