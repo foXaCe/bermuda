@@ -44,7 +44,7 @@ PLATFORMS = [
     # Platform.BINARY_SENSOR
 ]
 
-# Should probably retreive this from the component, but it's in "DOMAIN" *shrug*
+# Should probably retrieve this from the component, but it's in "DOMAIN" *shrug*
 DOMAIN_PRIVATE_BLE_DEVICE = "private_ble_device"
 
 # Signal names we are using:
@@ -89,6 +89,7 @@ BDADDR_TYPE_OTHER: Final = "bd_addr_other"  # Default 48bit MAC
 BDADDR_TYPE_RANDOM_RESOLVABLE: Final = "bd_addr_random_resolvable"
 BDADDR_TYPE_RANDOM_UNRESOLVABLE: Final = "bd_addr_random_unresolvable"
 BDADDR_TYPE_RANDOM_STATIC: Final = "bd_addr_random_static"
+BDADDR_TYPE_RANDOM_RESERVED: Final = "bd_addr_random_reserved"
 BDADDR_TYPE_NOT_MAC48: Final = "bd_addr_not_mac48"
 # Non-bluetooth address types - for our metadevice entries
 ADDR_TYPE_IBEACON: Final = "addr_type_ibeacon"
@@ -126,7 +127,7 @@ class IrkTypes(Enum):
 #
 # IRK devices typically change their MAC every 15 minutes, so 96 addresses/day.
 #
-# Accoring to the backend comments, BlueZ times out adverts at 180 seconds, and HA
+# According to the backend comments, BlueZ times out adverts at 180 seconds, and HA
 # expires adverts at 195 seconds to avoid churning.
 #
 PRUNE_MAX_COUNT = 1000  # How many device entries to allow at maximum
@@ -167,7 +168,7 @@ DOCS[CONF_MAX_RADIUS] = "For simple area-detection, max radius from receiver"
 CONF_MAX_VELOCITY, DEFAULT_MAX_VELOCITY = "max_velocity", 3
 DOCS[CONF_MAX_VELOCITY] = (
     "In metres per second - ignore readings that imply movement away faster than",
-    "this limit. 3m/s (10km/h) is good.",  # fmt: skip
+    "this limit. 3m/s (10km/h) is good.",
 )
 
 CONF_DEVTRACK_TIMEOUT, DEFAULT_DEVTRACK_TIMEOUT = "devtracker_nothome_timeout", 30
@@ -185,7 +186,7 @@ CONF_RSSI_OFFSETS = "rssi_offsets"
 CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL = "update_interval", 10
 DOCS[CONF_UPDATE_INTERVAL] = (
     "Maximum time between sensor updates in seconds. Smaller intervals",
-    "means more data, bigger database.",  # fmt: skip
+    "means more data, bigger database.",
 )
 
 CONF_SMOOTHING_SAMPLES, DEFAULT_SMOOTHING_SAMPLES = "smoothing_samples", 20

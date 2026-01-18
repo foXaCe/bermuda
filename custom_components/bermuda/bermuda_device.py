@@ -38,6 +38,7 @@ from .const import (
     ADDR_TYPE_PRIVATE_BLE_DEVICE,
     BDADDR_TYPE_NOT_MAC48,
     BDADDR_TYPE_OTHER,
+    BDADDR_TYPE_RANDOM_RESERVED,
     BDADDR_TYPE_RANDOM_RESOLVABLE,
     BDADDR_TYPE_RANDOM_STATIC,
     BDADDR_TYPE_RANDOM_UNRESOLVABLE,
@@ -206,16 +207,16 @@ class BermudaDevice(dict):
             elif len(self.address) == 17:
                 top_bits = int(self.address[0:1], 16) >> 2
                 # The two MSBs of the first octet dictate the random type...
-                if top_bits & 0b00:  # First char will be in [0 1 2 3]
+                if (top_bits & 0b11) == 0b00:  # First char will be in [0 1 2 3]
                     self.address_type = BDADDR_TYPE_RANDOM_UNRESOLVABLE
-                elif top_bits & 0b01:  # Addresses where the first char will be 4,5,6 or 7
+                elif (top_bits & 0b11) == 0b01:  # Addresses where the first char will be 4,5,6 or 7
                     _LOGGER.debug("Identified Resolvable Private (potential IRK source) Address on %s", self.address)
                     self.address_type = BDADDR_TYPE_RANDOM_RESOLVABLE
                     self._coordinator.irk_manager.check_mac(self.address)
-                elif top_bits & 0b10:
-                    self.address_type = "reserved"
+                elif (top_bits & 0b11) == 0b10:
+                    self.address_type = BDADDR_TYPE_RANDOM_RESERVED
                     _LOGGER.debug("Hey, got one of those reserved MACs, %s", self.address)
-                elif top_bits & 0b11:
+                elif (top_bits & 0b11) == 0b11:
                     self.address_type = BDADDR_TYPE_RANDOM_STATIC
 
             else:
@@ -299,7 +300,7 @@ class BermudaDevice(dict):
         # scanner_devreg_bt: DeviceEntry from HA's device_registry from Bluetooth integration
         # scanner_devreg_mac: DeviceEntry from HA's *other* integrations, like ESPHome, Shelly.
 
-        connlist = set()  # For macthing against device_registry connections
+        connlist = set()  # For matching against device_registry connections
         maclist = set()  # For matching against device_registry identifier
 
         # The device registry devices for the bluetooth and ESPHome/Shelly devices.

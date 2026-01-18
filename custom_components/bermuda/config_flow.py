@@ -309,8 +309,7 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
                     SelectOptionDict(
                         value=device.address.upper(),
                         label=(
-                            f"iBeacon: {device.address.upper()} {source_mac}{device_name}"
-                            f"{manufacturer_info}{rssi_info}"
+                            f"iBeacon: {device.address.upper()} {source_mac}{device_name}{manufacturer_info}{rssi_info}"
                         ),
                     )
                 )

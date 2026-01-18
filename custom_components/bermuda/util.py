@@ -99,11 +99,9 @@ def rssi_to_metres(rssi, ref_power=None, attenuation=None):
                     calibration, antenna design and orientation etc.
     """
     if ref_power is None:
-        return False
-        # ref_power = self.ref_power
+        return None
     if attenuation is None:
-        return False
-        # attenuation= self.attenuation
+        return None
 
     return 10 ** ((ref_power - rssi) / (10 * attenuation))
 
