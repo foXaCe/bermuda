@@ -138,6 +138,7 @@ class BermudaIrkManager:
                 _LOGGER.error(
                     "_validate_mac_irk called without prepared cipher for %s %s - this is a bug", address, irk.hex()
                 )
+                return None
         if resolve_private_address(cipher, address):
             _LOGGER.debug(
                 "######======---- Found new valid MAC for irk %s - %s. Sending callbacks", irk.hex()[:4], address

@@ -272,7 +272,9 @@ class BermudaSensorScanner(BermudaSensor):
         # entry. Instead refer to the BermudaDevice, which takes trouble
         # to use user-given names etc.
         if self._device.area_advert is not None:
-            return self.coordinator.devices[self._device.area_advert.scanner_address].name
+            scanner_device = self.coordinator.devices.get(self._device.area_advert.scanner_address)
+            if scanner_device is not None:
+                return scanner_device.name
         return None
 
 
@@ -358,7 +360,10 @@ class BermudaSensorScannerRange(BermudaSensorRange):
         self.coordinator = coordinator
         self.config_entry = config_entry
         self._device = coordinator.devices[address]
-        self._scanner = coordinator.devices[scanner_address]
+        self._scanner = coordinator.devices.get(scanner_address)
+        if self._scanner is None:
+            msg = f"Scanner device {scanner_address} not found in coordinator.devices"
+            raise KeyError(msg)
 
     @property
     def unique_id(self):

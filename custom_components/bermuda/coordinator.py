@@ -12,7 +12,6 @@ import aiofiles
 import voluptuous as vol
 import yaml
 from bluetooth_data_tools import monotonic_time_coarse
-from habluetooth import BaseHaScanner
 from homeassistant.components import bluetooth
 from homeassistant.components.bluetooth.api import _get_manager
 from homeassistant.const import MAJOR_VERSION as HA_VERSION_MAJ
@@ -97,7 +96,7 @@ from .const import (
 from .util import mac_explode_formats, mac_norm
 
 if TYPE_CHECKING:
-    from habluetooth import BluetoothServiceInfoBleak
+    from habluetooth import BaseHaScanner, BluetoothServiceInfoBleak
     from homeassistant.components.bluetooth import (
         BluetoothChange,
     )
@@ -877,10 +876,10 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
                     "Prune quota short by %d. Pruning %d extra devices (down to age %0.2f seconds)",
                     prune_quota_shortfall,
                     cutoff_index,
-                    nowstamp - sorted_addresses[prune_quota_shortfall - 1][0],
+                    nowstamp - sorted_addresses[cutoff_index - 1][0],
                 )
                 # pylint: disable-next=unused-variable
-                for _stamp, address in sorted_addresses[: prune_quota_shortfall - 1]:
+                for _stamp, address in sorted_addresses[:cutoff_index]:
                     prune_list.append(address)
             else:
                 _LOGGER.warning(
@@ -1037,41 +1036,43 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
                 "Only IBEACON_SOURCE devices can be used to see a beacon metadevice. %s is not",
                 source_device.name,
             )
+            return
         if source_device.beacon_unique_id is None:
             _LOGGER.error("Source device %s is not a valid iBeacon!", source_device.name)
-        else:
-            metadevice = self._get_or_create_device(source_device.beacon_unique_id)
-            if len(metadevice.metadevice_sources) == 0:
-                # #### NEW METADEVICE #####
-                # (do one-off init stuff here)
-                if metadevice.address not in self.metadevices:
-                    self.metadevices[metadevice.address] = metadevice
+            return
 
-                # Copy over the beacon attributes
-                metadevice.name_bt_serviceinfo = source_device.name_bt_serviceinfo
-                metadevice.name_bt_local_name = source_device.name_bt_local_name
-                metadevice.beacon_unique_id = source_device.beacon_unique_id
-                metadevice.beacon_major = source_device.beacon_major
-                metadevice.beacon_minor = source_device.beacon_minor
-                metadevice.beacon_power = source_device.beacon_power
-                metadevice.beacon_uuid = source_device.beacon_uuid
+        metadevice = self._get_or_create_device(source_device.beacon_unique_id)
+        if len(metadevice.metadevice_sources) == 0:
+            # #### NEW METADEVICE #####
+            # (do one-off init stuff here)
+            if metadevice.address not in self.metadevices:
+                self.metadevices[metadevice.address] = metadevice
 
-                # Check if we should set up sensors for this beacon
-                if metadevice.address.upper() in self.options.get(CONF_DEVICES, []):
-                    # This is a meta-device we track. Flag it for set-up:
-                    metadevice.create_sensor = True
+            # Copy over the beacon attributes
+            metadevice.name_bt_serviceinfo = source_device.name_bt_serviceinfo
+            metadevice.name_bt_local_name = source_device.name_bt_local_name
+            metadevice.beacon_unique_id = source_device.beacon_unique_id
+            metadevice.beacon_major = source_device.beacon_major
+            metadevice.beacon_minor = source_device.beacon_minor
+            metadevice.beacon_power = source_device.beacon_power
+            metadevice.beacon_uuid = source_device.beacon_uuid
 
-            # #### EXISTING METADEVICE ####
-            # (only do things that might have to change when MAC address cycles etc)
+            # Check if we should set up sensors for this beacon
+            if metadevice.address.upper() in self.options.get(CONF_DEVICES, []):
+                # This is a meta-device we track. Flag it for set-up:
+                metadevice.create_sensor = True
 
-            if source_device.address not in metadevice.metadevice_sources:
-                # We have a *new* source device.
-                # insert this device as a known source
-                metadevice.metadevice_sources.insert(0, source_device.address)
+        # #### EXISTING METADEVICE ####
+        # (only do things that might have to change when MAC address cycles etc)
 
-                # If we have a new / better name, use that..
-                metadevice.name_bt_serviceinfo = metadevice.name_bt_serviceinfo or source_device.name_bt_serviceinfo
-                metadevice.name_bt_local_name = metadevice.name_bt_local_name or source_device.name_bt_local_name
+        if source_device.address not in metadevice.metadevice_sources:
+            # We have a *new* source device.
+            # insert this device as a known source
+            metadevice.metadevice_sources.insert(0, source_device.address)
+
+            # If we have a new / better name, use that..
+            metadevice.name_bt_serviceinfo = metadevice.name_bt_serviceinfo or source_device.name_bt_serviceinfo
+            metadevice.name_bt_local_name = metadevice.name_bt_local_name or source_device.name_bt_local_name
 
     def update_metadevices(self):
         """
@@ -1486,7 +1487,6 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
           - force=True or
           - self._force_full_scanner_init=True
         """
-        _new_ha_scanners = set[BaseHaScanner]
         # Using new API in 2025.2
         _new_ha_scanners = set(self._manager.async_current_scanners())
 
