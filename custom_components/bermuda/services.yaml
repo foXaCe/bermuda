@@ -1,15 +1,24 @@
 dump_devices:
   name: Dump devices
+  description: >-
+    Returns the internal data structure of Bermuda devices, optionally limited to
+    the given address(es). Includes the rssi and other info from each scanner.
   fields:
     addresses:
       required: false
       example: "EE:E8:37:9F:6B:54 C7:B8:C6:B0:27:11 AA:AA:AA:AA:AA:AA"
       default: ""
+      selector:
+        text:
     configured_devices:
       required: false
       example: "False"
       default: true
+      selector:
+        boolean:
     redact:
       required: false
       example: "False"
       default: false
+      selector:
+        boolean:
