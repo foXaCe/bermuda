@@ -468,12 +468,9 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
             raise
 
     async def async_step_calibration1_global(self, user_input=None):
-        # FIXME: This is ridiculous. But I can't yet find a better way.
+        # Workaround: HTML tags in translations break placeholder substitution.
+        # Injecting them as placeholders avoids the parsing issue.
         _ugly_token_hack = {
-            # These are work-arounds for (broken?) placeholder substitutions.
-            # I've not been able to find out why, but just having <details> in the
-            # en.json will cause placeholders to break, due to *something* treating
-            # the html elements as placeholders.
             "details": "<details>",
             "details_end": "</details>",
             "summary": "<summary>",
@@ -511,7 +508,7 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
             self._last_device = user_input[CONF_DEVICES]
             self._last_scanner = user_input[CONF_SCANNERS]
 
-        # TODO: Switch this to be a device selector when devices are made for scanners
+        # Use SelectSelector since scanners don't have device entries yet
         scanner_options = [
             SelectOptionDict(
                 value=scanner,

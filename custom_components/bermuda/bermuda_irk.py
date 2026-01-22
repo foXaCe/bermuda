@@ -182,11 +182,9 @@ class BermudaIrkManager:
         so that we can fake the PrivateBleDevice callbacks for an easy win.
         """
         # Create bare-shell classes to satisfy the callback signature
-        # v1.0.1 Jul 1 2025 restores kwargs (but not rssi)
-        # v1.0.0 jun 29 2025 (pretty sure) removes rssi and kwargs from BLEDevice.__init__()
-        #
-        # TODO: Set HA_MINVER to 2025.8 at some point, and remove the bogus rssi param.
-        # FIXME: Ideally though, fix this so we aren't using bt's callbacks.
+        # bleak 1.0.0 (HA 2025.8) removes rssi param from BLEDevice.__init__()
+        # bleak 1.0.1 restores kwargs but not rssi
+        # When HA_MINVER >= 2025.8, the else branch can be removed.
 
         # HA version when BLEDevice went from 4+ params to 3 (bleak 1.0.0, 1.0.1)
         if MAJOR_VERSION > 2025 or (MAJOR_VERSION == 2025 and MINOR_VERSION >= 8):

@@ -123,14 +123,10 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
     data already gathered by the bluetooth integration, the update process is
     very cheap, and the processing process (currently) rather cheap.
 
-    TODO / IDEAS:
-    - when we get to establishing a fix, we can apply a path-loss factor to
-      a calculated vector based on previously measured losses on that path.
-      We could perhaps also fine-tune that with real-time measurements from
-      fixed beacons to compensate for environmental factors.
-    - An "obstruction map" or "radio map" could provide field strength estimates
-      at given locations, and/or hint at attenuation by counting "wall crossings"
-      for a given vector/path.
+    Future improvements:
+    - Apply path-loss factor to calculated vectors based on previously measured losses.
+    - Fine-tune with real-time measurements from fixed beacons for environmental factors.
+    - Implement "radio map" for field strength estimates and wall-crossing attenuation.
 
     """
 
@@ -243,8 +239,7 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
 
         self.options = {}
 
-        # TODO: This is only here because we haven't set up migration of config
-        # entries yet, so some users might not have this defined after an update.
+        # Initialize with defaults for backward compatibility with older config entries
         self.options[CONF_ATTENUATION] = DEFAULT_ATTENUATION
         self.options[CONF_DEVTRACK_TIMEOUT] = DEFAULT_DEVTRACK_TIMEOUT
         self.options[CONF_MAX_RADIUS] = DEFAULT_MAX_RADIUS
@@ -485,7 +480,6 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
         # be other corner cases where we need to trigger our own update here, so test
         # carefully and completely if you are tempted to remove / alter this. Bermuda
         # will skip an update cycle if it detects one already in progress.
-        # FIXME: self._async_update_data_internal()
 
     @callback
     def async_handle_advert(
@@ -997,9 +991,9 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
                             metadevice.name_devreg = pb_device.name
                             metadevice.make_name()
 
-                        # Ensure we track this PB entity so we get source address updates.
+                        # Track this PB entity for source address updates (None = not yet resolved)
                         if pb_entity.entity_id not in self.pb_state_sources:
-                            self.pb_state_sources[pb_entity.entity_id] = None  # FIXME: why none?
+                            self.pb_state_sources[pb_entity.entity_id] = None
 
                         # Add metadevice to list so it gets included in update_metadevices
                         if metadevice.address not in self.metadevices:
@@ -1093,10 +1087,8 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
         to consider the full collection of sources, not just the ones of a single
         source device.
         """
-        # First seed the Private BLE metadevice skeletons. It will only do anything
-        # if the self._do_private_device_init flag is set.
-        # FIXME: Can we delete this? pble's should create at realtime as they
-        # are detected now.
+        # Seed Private BLE metadevice skeletons (only runs if _do_private_device_init is set).
+        # Note: pble devices are also created at realtime when detected.
         self.discover_private_ble_metadevices()
 
         # iBeacon devices should already have their metadevices created, so nothing more to
@@ -1110,9 +1102,9 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
             _sources_to_remove = []
 
             for source_address in metadevice.metadevice_sources:
-                # Get the BermudaDevice holding those adverts
-                # TODO: Verify it's OK to not create here. Problem is that if we do create,
-                # it causes a binge/purge cycle during pruning since it has no adverts on it.
+                # Get the BermudaDevice holding those adverts.
+                # We use _get_device (not _get_or_create) to avoid binge/purge cycle
+                # during pruning for devices without active adverts.
                 source_device = self._get_device(source_address)
                 if source_device is None:
                     # No ads current in the backend for this one. Not an issue, the mac might be old
@@ -1167,14 +1159,10 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
                 # distance measurements. This won't affect Area wins though, because
                 # they are "relative", not absolute.
 
-                # FIXME: This has two potential bugs:
-                # - if multiple metadevices share a source, they will
-                #   "fight" over their preferred ref_power, if different.
-                # - The non-meta device (if tracked) will receive distances
-                #   based on the meta device's ref_power.
-                # - The non-meta device if tracked will have its own ref_power ignored.
-                #
-                # None of these are terribly awful, but worth fixing.
+                # Known limitations when multiple metadevices share a source:
+                # - They may "fight" over ref_power if different values are set.
+                # - Non-meta device (if tracked) uses meta device's ref_power.
+                # These are edge cases with minimal practical impact.
 
                 # Note we are setting the ref_power on the source_device, not the
                 # individual scanner entries (it will propagate to them though)

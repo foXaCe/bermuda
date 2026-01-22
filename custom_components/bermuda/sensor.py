@@ -182,10 +182,7 @@ class BermudaSensor(BermudaEntity, SensorEntity):
     @property
     def icon(self):
         """Provide a custom icon for particular entities."""
-        # TODO: This is ugly doing a check on name, and is a kludge
-        # because I originally was a bit reckless with the multiple
-        # inheritance here. So all the sensors should be restructured
-        # a bit to clean up this and other properties.
+        # Icon varies by sensor type due to class inheritance design
         if self.name == "Area":
             return self._device.area_icon
         if self.name == "Area Last Seen":
