@@ -102,10 +102,7 @@ class BermudaNumber(BermudaEntity, RestoreNumber):
     @property
     def native_value(self) -> float | None:
         """Return value of number."""
-        # if self.restored_data is not None and self.restored_data.native_value is not None:
-        #     return self.restored_data.native_value
         return self.coordinator.devices[self.address].ref_power
-        return 0
 
     async def async_set_native_value(self, value: float) -> None:
         """Set value."""
