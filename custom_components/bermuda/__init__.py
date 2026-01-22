@@ -105,14 +105,11 @@ async def async_remove_config_entry_device(
     coordinator: BermudaDataUpdateCoordinator = config_entry.runtime_data.coordinator
     address = None
     for domain, ident in device_entry.identifiers:
-        try:
-            if domain == DOMAIN:
-                # the identifier should be the base device address, and
-                # may have "_range" or some other per-sensor suffix.
-                # The address might be a mac address, IRK or iBeacon uuid
-                address = ident.split("_")[0]
-        except KeyError:
-            pass
+        if domain == DOMAIN:
+            # The identifier is the base device address, possibly with suffix like "_range".
+            # Extract just the address part (MAC, IRK, or iBeacon uuid).
+            address = ident.split("_")[0]
+            break
     if address is not None:
         try:
             coordinator.devices[mac_norm(address)].create_sensor = False
