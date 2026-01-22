@@ -8,6 +8,7 @@ from homeassistant.components.sensor import RestoreSensor, SensorEntity
 from homeassistant.components.sensor.const import SensorDeviceClass, SensorStateClass
 from homeassistant.const import (
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+    STATE_NOT_HOME,
     STATE_UNAVAILABLE,
     EntityCategory,
     UnitOfLength,
@@ -173,7 +174,9 @@ class BermudaSensor(BermudaEntity, SensorEntity):
     @property
     def native_value(self):
         """Return the state of the sensor."""
-        # return self.coordinator.data.get("body")
+        # Return not_home when device is not detected, for consistency with device_tracker
+        if self._device.area_name is None:
+            return STATE_NOT_HOME
         return self._device.area_name
 
     @property
@@ -252,6 +255,9 @@ class BermudaSensorFloor(BermudaSensor):
         # Don't use area_scanner.name because it comes from the advert
         # entry. Instead refer to the BermudaDevice, which takes trouble
         # to use user-given names etc.
+        # Return not_home when device is not detected, for consistency with device_tracker
+        if self._device.floor_name is None:
+            return STATE_NOT_HOME
         return self._device.floor_name
 
 
@@ -271,11 +277,12 @@ class BermudaSensorScanner(BermudaSensor):
         # Don't use area_scanner.name because it comes from the advert
         # entry. Instead refer to the BermudaDevice, which takes trouble
         # to use user-given names etc.
+        # Return not_home when device is not detected, for consistency with device_tracker
         if self._device.area_advert is not None:
             scanner_device = self.coordinator.devices.get(self._device.area_advert.scanner_address)
             if scanner_device is not None:
                 return scanner_device.name
-        return None
+        return STATE_NOT_HOME
 
 
 class BermudaSensorRssi(BermudaSensor):
