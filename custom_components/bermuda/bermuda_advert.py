@@ -144,13 +144,11 @@ class BermudaAdvert(dict):
 
             if new_stamp is None:
                 self.stale_update_count += 1
-                _LOGGER.debug("Advert from %s for %s lacks stamp, unexpected.", scanner.name, self._device.name)
                 return
 
             if self.stamp > new_stamp:
-                # The existing stamp is NEWER, bail but complain on the way.
+                # The existing stamp is NEWER, bail.
                 self.stale_update_count += 1
-                _LOGGER.debug("Advert from %s for %s is OLDER than last recorded", scanner.name, self._device.name)
                 return
 
             if self.stamp == new_stamp:
@@ -168,12 +166,6 @@ class BermudaAdvert(dict):
 
         # Update our parent scanner's last_seen if we have a new stamp.
         if new_stamp > self.scanner_device.last_seen + 0.01:  # some slight warp seems common.
-            _LOGGER.debug(
-                "Advert from %s for %s is %.6fs NEWER than scanner's last_seen, odd",
-                self.scanner_device.name,
-                self._device.name,
-                new_stamp - self.scanner_device.last_seen,
-            )
             self.scanner_device.last_seen = new_stamp
 
         if len(self.hist_stamp) == 0 or new_stamp is not None:

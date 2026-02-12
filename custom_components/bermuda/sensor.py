@@ -559,40 +559,14 @@ class BermudaActiveProxyCount(BermudaGlobalSensor):
         total_active = 0
         max_age = 10  # seconds
 
-        _LOGGER.debug("=" * 80)
-        _LOGGER.debug("Active Proxy Count - Scanner Analysis")
-        _LOGGER.debug("=" * 80)
-        _LOGGER.debug("Total scanners found: %d", len(scanners))
-
         for scanner in scanners:
-            name = scanner.get("name")
             area_name = scanner.get("area_name")
-            address = scanner.get("address")
             last_stamp_age = scanner.get("last_stamp_age", float("inf"))
 
-            _LOGGER.debug(
-                "Scanner: %s | Address: %s | Area: %s | Last seen: %.2fs ago",
-                name,
-                address,
-                area_name,
-                last_stamp_age,
-            )
-
-            # Only count active scanners (seen in last 10 seconds)
             if last_stamp_age <= max_age:
                 total_active += 1
                 if area_name and area_name != "null":
                     areas[area_name] = areas.get(area_name, 0) + 1
-                    _LOGGER.debug("  → COUNTED as ACTIVE in area '%s'", area_name)
-                else:
-                    _LOGGER.debug("  → ACTIVE but NO AREA (area_name=%s)", area_name)
-            else:
-                _LOGGER.debug("  → IGNORED (too old: %.2fs > %ds)", last_stamp_age, max_age)
-
-        _LOGGER.debug("-" * 80)
-        _LOGGER.debug("Final result - Total active: %d", total_active)
-        _LOGGER.debug("Areas breakdown: %s", areas)
-        _LOGGER.debug("=" * 80)
 
         return {
             "areas": areas,

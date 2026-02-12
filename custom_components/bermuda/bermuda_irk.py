@@ -85,8 +85,8 @@ class BermudaIrkManager:
         expired = [macirk.mac for macirk in self._macs.values() if macirk.expires < nowstamp]
         for address in expired:
             del self._macs[address]
-        expired_count = len(expired)
-        _LOGGER.debug("BermudaIrks expired %d of %d MACs from cache", expired_count, expired_count + len(self._macs))
+        if expired:
+            _LOGGER.debug("BermudaIrks expired %d MACs from cache (%d remaining)", len(expired), len(self._macs))
 
     def check_mac(self, address: str) -> bytes:
         """
@@ -140,16 +140,13 @@ class BermudaIrkManager:
                 )
                 return None
         if resolve_private_address(cipher, address):
-            _LOGGER.debug(
-                "######======---- Found new valid MAC for irk %s - %s. Sending callbacks", irk.hex()[:4], address
-            )
+            _LOGGER.debug("Resolved MAC %s to IRK %s...", address, irk.hex()[:4])
             result = self._update_saved_mac(address, irk)
             if result != irk:
                 _LOGGER.error("Something went wrong saving macirk: %s %s is not irk %s", address, result, irk)
             self.fire_callbacks(irk, address)
             return result
         if int(address[0], 16) & 0x04:
-            _LOGGER.debug("IRK does not resolve %s with %s", address, irk.hex()[:4])
             return self._update_saved_mac(address, IrkTypes.NO_KNOWN_IRK_MATCH.value)
         else:
             return self._update_saved_mac(address, IrkTypes.NOT_RESOLVABLE_ADDRESS.value)
@@ -160,19 +157,12 @@ class BermudaIrkManager:
             # No existing, save anew.
             expiry = floor(monotonic_time_coarse() + PRUNE_TIME_KNOWN_IRK)
             self._macs[address] = ResolvableMAC(address, expiry, irk)
-            _LOGGER.debug("Saved NEW Macirk pair: %s %s", address, irk.hex())
             return irk
 
         if macirk.irk != irk:
-            _LOGGER.debug(
-                "RE-saving macirk for mac %s, old irk %s, new irk %s", address, macirk.irk.hex()[:4], irk.hex()[:4]
-            )
             # Replace the entry with a new macirk.
             self._macs[address] = ResolvableMAC(address, macirk.expires, irk)
-            return irk
-        else:
-            _LOGGER.debug("No change to macirk %s %s", macirk.mac, macirk.irk.hex()[:4])
-            return irk
+        return irk
 
     def fire_callbacks(self, irk, mac) -> None:
         """

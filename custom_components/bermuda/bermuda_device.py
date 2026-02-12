@@ -210,12 +210,10 @@ class BermudaDevice(dict):
                 if (top_bits & 0b11) == 0b00:  # First char will be in [0 1 2 3]
                     self.address_type = BDADDR_TYPE_RANDOM_UNRESOLVABLE
                 elif (top_bits & 0b11) == 0b01:  # Addresses where the first char will be 4,5,6 or 7
-                    _LOGGER.debug("Identified Resolvable Private (potential IRK source) Address on %s", self.address)
                     self.address_type = BDADDR_TYPE_RANDOM_RESOLVABLE
                     self._coordinator.irk_manager.check_mac(self.address)
                 elif (top_bits & 0b11) == 0b10:
                     self.address_type = BDADDR_TYPE_RANDOM_RESERVED
-                    _LOGGER.debug("Hey, got one of those reserved MACs, %s", self.address)
                 elif (top_bits & 0b11) == 0b11:
                     self.address_type = BDADDR_TYPE_RANDOM_STATIC
 
@@ -487,7 +485,7 @@ class BermudaDevice(dict):
             # The ha_scanner instance is new or we never had one, let's [re]init ourselves.
             if self._hascanner is not None:
                 # Ordinarily we'd expect init to have been called first, so...
-                _LOGGER.info("Received replacement ha_scanner object for %s", self.__repr__)
+                _LOGGER.info("Received replacement ha_scanner object for %s", self)
             self.async_as_scanner_init(ha_scanner)
 
         # This needs to be recalculated each run, since we don't have access to _last_update
@@ -756,12 +754,6 @@ class BermudaDevice(dict):
         for uuid in advert.service_uuids:
             # Extract UUID short form - try both full UUID format and short format
             uuid_str = str(uuid).upper()
-            _LOGGER.debug(
-                "Processing service UUID for %s: full='%s', extracting uuid[4:8]='%s'",
-                self.address,
-                uuid_str,
-                uuid_str[4:8] if len(uuid_str) > 8 else uuid_str,
-            )
 
             # Try to extract the 16-bit UUID from the full format
             if len(uuid_str) >= 8:
@@ -770,14 +762,6 @@ class BermudaDevice(dict):
                 uuid_short = uuid_str
 
             name, generic = self._coordinator.get_manufacturer_from_id(uuid_short)
-            if name:
-                _LOGGER.debug(
-                    "Service UUID %s identified as %s (generic=%s) for %s",
-                    uuid_short,
-                    name,
-                    generic,
-                    self.address,
-                )
             # We'll use the name if we don't have one already, or if it's non-generic.
             if name and (self.manufacturer is None or not generic):
                 self.manufacturer = name

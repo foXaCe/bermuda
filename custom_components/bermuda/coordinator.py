@@ -407,10 +407,7 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
         This catches area changes (on scanners) and any new/changed
         Private BLE Devices.
         """
-        if ev.data["action"] == "update":
-            _LOGGER.debug("Device registry UPDATE. ev: %s changes: %s", ev, ev.data["changes"])
-        else:
-            _LOGGER.debug("Device registry has changed. ev: %s", ev)
+        _LOGGER.debug("Device registry %s for device_id %s", ev.data["action"], ev.data.get("device_id"))
 
         device_id = ev.data.get("device_id")
 
@@ -832,12 +829,6 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
                     # in high-density situations, and *we* don't need to hang on to new
                     # enrollments because we'll seed them from PBLE.
                     if device.last_seen < stamp_unknown_irk:
-                        _LOGGER.debug(
-                            "Marking stale (%ds) Unknown IRK address for pruning: [%s] %s",
-                            nowstamp - device.last_seen,
-                            device_address,
-                            device.name,
-                        )
                         prune_list.append(device_address)
                     elif device.last_seen < nowstamp - 200:  # BlueZ cache time
                         # It's not stale, but we will prune it if we can't make our
@@ -852,10 +843,6 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
 
                 elif device.last_seen < nowstamp - PRUNE_TIME_DEFAULT:
                     # It's a static address, and stale.
-                    _LOGGER.debug(
-                        "Marking old device entry for pruning: %s",
-                        device.name,
-                    )
                     prune_list.append(device_address)
                 else:
                     # Device is static, not tracked, not so old, but we might have to prune it anyway
@@ -872,13 +859,6 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
                 # Sort the prunables by timestamp ascending
                 sorted_addresses = sorted([(v, k) for k, v in prunable_stamps.items()])
                 cutoff_index = min(len(sorted_addresses), prune_quota_shortfall)
-
-                _LOGGER.debug(
-                    "Prune quota short by %d. Pruning %d extra devices (down to age %0.2f seconds)",
-                    prune_quota_shortfall,
-                    cutoff_index,
-                    nowstamp - sorted_addresses[cutoff_index - 1][0],
-                )
                 # pylint: disable-next=unused-variable
                 for _stamp, address in sorted_addresses[:cutoff_index]:
                     prune_list.append(address)
@@ -887,18 +867,17 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
                     "Need to prune another %s devices to make quota, but no extra prunables available",
                     prune_quota_shortfall,
                 )
-        else:
-            _LOGGER.debug(
-                "Pruning %d available MACs, we are inside quota by %d.", len(prune_list), prune_quota_shortfall * -1
-            )
 
         # ###############################################
         # Prune_list is now ready to action. It contains no keepers, and is already
         # expanded if necessary to meet quota, as much as we can.
 
         # Prune the source devices
+        if prune_list:
+            _LOGGER.debug(
+                "Pruning %d devices (%d total remaining)", len(prune_list), len(self.devices) - len(prune_list)
+            )
         for device_address in prune_list:
-            _LOGGER.debug("Acting on prune list for %s", device_address)
             del self.devices[device_address]
 
         # Clean out the scanners dicts in metadevices and scanners
@@ -922,11 +901,6 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
             # clean out the device/scanner advert pairs
             for advert_tuple in list(device.adverts.keys()):
                 if device.adverts[advert_tuple].device_address in prune_list:
-                    _LOGGER.debug(
-                        "Pruning metadevice advert %s aged %ds",
-                        advert_tuple,
-                        nowstamp - device.adverts[advert_tuple].stamp,
-                    )
                     del device.adverts[advert_tuple]
 
     def discover_private_ble_metadevices(self):
@@ -1627,7 +1601,6 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
                 i += 1
                 for altmac in mac_explode_formats(address):
                     self.redactions[altmac] = f"{address[:2]}::SCANNER_{i}::{address[-2:]}"
-        _LOGGER.debug("Redact scanners: %ss, %d items", monotonic_time_coarse() - _stamp, len(self.redactions))
         # CONFIGURED DEVICES
         for non_lower_address in self.options.get(CONF_DEVICES, []):
             address = non_lower_address.lower()
@@ -1643,7 +1616,6 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
                 else:
                     # Don't know what it is, but not a mac.
                     self.redactions[address] = f"CFG_OTHER_{1}_{address}"
-        _LOGGER.debug("Redact confdevs: %ss, %d items", monotonic_time_coarse() - _stamp, len(self.redactions))
         # EVERYTHING ELSE
         for non_lower_address, device in self.devices.items():
             address = non_lower_address.lower()
@@ -1662,12 +1634,9 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
                 else:
                     # Don't know what it is.
                     self.redactions[address] = f"OTHER_{i}_{address}"
-        _LOGGER.debug("Redact therest: %ss, %d items", monotonic_time_coarse() - _stamp, len(self.redactions))
         _elapsed = monotonic_time_coarse() - _stamp
         if _elapsed > 0.5:
             _LOGGER.warning("Redaction list update took %.3f seconds, has %d items", _elapsed, len(self.redactions))
-        else:
-            _LOGGER.debug("Redaction list update took %.3f seconds, has %d items", _elapsed, len(self.redactions))
         self.stamp_redactions_expiry = monotonic_time_coarse() + PRUNE_TIME_REDACTIONS
 
     def redact_data(self, data, first_recursion=True):

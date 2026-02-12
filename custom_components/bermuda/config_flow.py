@@ -23,7 +23,6 @@ from homeassistant.helpers.selector import (
 )
 
 from .const import (
-    _LOGGER,
     ADDR_TYPE_IBEACON,
     ADDR_TYPE_PRIVATE_BLE_DEVICE,
     BDADDR_TYPE_RANDOM_RESOLVABLE,
@@ -238,11 +237,6 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
 
     async def async_step_selectdevices(self, user_input=None):
         """Handle a flow initialized by the user."""
-        _LOGGER.debug("=" * 80)
-        _LOGGER.debug("SELECTDEVICES - Starting step")
-        _LOGGER.debug("user_input: %s", user_input)
-        _LOGGER.debug("=" * 80)
-
         if user_input is not None:
             # Check if user submitted device selections (not just filtering)
             selected_devices = []
@@ -252,20 +246,14 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
 
             # If we have actual device selections (not empty lists), save and exit
             if selected_devices:
-                # User is submitting final selection
-                _LOGGER.debug("Saving device selection: %s", selected_devices)
                 self.options[CONF_DEVICES] = selected_devices
                 return await self._update_options()
-            # Otherwise, user is just filtering - continue to re-show form
-            _LOGGER.debug("No devices selected, re-showing form with filter")
 
         # Grab the co-ordinator's device list so we can build a selector from it.
         self.devices = self.config_entry.runtime_data.coordinator.devices
 
         # Get search text if it exists
         filter_text = user_input.get("device_filter", "").lower() if user_input else ""
-
-        _LOGGER.debug("Search filter applied: '%s'", filter_text)
 
         # Where we store the options before building the selector
         options_list = []
@@ -394,20 +382,13 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
         )
 
         # Build the form schema with search field
-        _LOGGER.debug("Building form schema with search field")
-
-        try:
-            data_schema = {
-                vol.Optional(
-                    "device_filter",
-                    default=filter_text,
-                    description={"suggested_value": filter_text},
-                ): TextSelector(TextSelectorConfig(type="search")),
-            }
-            _LOGGER.debug("Form schema created successfully")
-        except Exception as ex:
-            _LOGGER.error("Error creating form schema: %s", ex, exc_info=True)
-            raise
+        data_schema = {
+            vol.Optional(
+                "device_filter",
+                default=filter_text,
+                description={"suggested_value": filter_text},
+            ): TextSelector(TextSelectorConfig(type="search")),
+        }
 
         # Add grouped selectors by device type
         if options_metadevices:
@@ -449,23 +430,11 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
                 )
             ] = SelectSelector(SelectSelectorConfig(options=options_randoms, multiple=True))
 
-        _LOGGER.debug(
-            "Showing form with %d ibeacon, %d standard, %d random devices",
-            len(options_metadevices),
-            len(options_otherdevices),
-            len(options_randoms),
+        return self.async_show_form(
+            step_id="selectdevices",
+            data_schema=vol.Schema(data_schema),
+            description_placeholders={"filter_help": description_text},
         )
-        _LOGGER.debug("=" * 80)
-
-        try:
-            return self.async_show_form(
-                step_id="selectdevices",
-                data_schema=vol.Schema(data_schema),
-                description_placeholders={"filter_help": description_text},
-            )
-        except Exception as ex:
-            _LOGGER.error("Error showing form: %s", ex, exc_info=True)
-            raise
 
     async def async_step_calibration1_global(self, user_input=None):
         # Workaround: HTML tags in translations break placeholder substitution.
