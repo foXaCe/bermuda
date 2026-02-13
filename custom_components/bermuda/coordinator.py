@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -506,7 +508,7 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
         # initial setup, then no updates will be triggered on the co-ordinator.
         # So let's check if we haven't updated recently, and do so...
         if self.stamp_last_update < monotonic_time_coarse() - (UPDATE_INTERVAL * 2):
-            self._async_update_data_internal()
+            self.hass.async_create_task(self._async_update_data_internal())
 
     def _check_all_platforms_created(self, address):
         """Checks if all platforms have finished loading a device's entities."""
@@ -614,10 +616,9 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         """Implementation of DataUpdateCoordinator update_data function."""
-        # return False
-        self._async_update_data_internal()
+        await self._async_update_data_internal()
 
-    def _async_update_data_internal(self):
+    async def _async_update_data_internal(self):
         """
         The primary update loop that processes almost all data in Bermuda.
 
@@ -631,6 +632,11 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
         - Making area determinations
         - (periodically) pruning device entries
 
+        Yield points (asyncio.sleep(0)) are inserted between heavy phases
+        and periodically inside device loops to prevent blocking the event
+        loop, which can trigger watchdog resets on radio co-processors
+        (e.g. Zigbee ZBT-2 with a 6-second firmware watchdog).
+
         """
         if self._waitingfor_load_manufacturer_ids:
             _LOGGER.debug("Waiting for BT data load...")
@@ -641,33 +647,34 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
             return False
         self.update_in_progress = True
 
+        cycle_start = time.monotonic()
+
         try:  # so we can still clean up update_in_progress
             nowstamp = monotonic_time_coarse()
 
-            # The main "get all adverts from the backend" part.
+            # Phase 1: Gather adverts from the backend
             result_gather_adverts = self._async_gather_advert_data()
+            await asyncio.sleep(0)
 
+            # Phase 2: Update metadevices
             self.update_metadevices()
+            await asyncio.sleep(0)
 
-            # Calculate per-device data
+            # Phase 3: Calculate per-device data
             #
             # Scanner entries have been loaded up with latest data, now we can
             # process data for all devices over all scanners.
-            for device in self.devices.values():
+            for _device_count, device in enumerate(self.devices.values()):
                 # Recalculate smoothed distances, last_seen etc
                 device.calculate_data()
+                if _device_count % 20 == 0:
+                    await asyncio.sleep(0)
 
+            await asyncio.sleep(0)
+
+            # Phase 4: Area refresh
             self._refresh_areas_by_min_distance()
-
-            # We might need to freshen deliberately on first start if no new scanners
-            # were discovered in the first scan update. This is likely if nothing has changed
-            # since the last time we booted.
-            # if self._do_full_scanner_init:
-            #     if not self._refresh_scanners():
-            #         # _LOGGER.debug("Failed to refresh scanners, likely config entry not ready.")
-            #         # don't fail the update, just try again next time.
-            #         # self.last_update_success = False
-            #         pass
+            await asyncio.sleep(0)
 
             # If any *configured* devices have not yet been seen, create device
             # entries for them so they will claim the restored sensors in HA
@@ -696,8 +703,9 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
                         # called by _run in events.py, so pretty sure we are "in the event loop".
                         async_dispatcher_send(self.hass, SIGNAL_DEVICE_NEW, address)
 
-            # Device Pruning (only runs periodically)
+            # Phase 5: Device Pruning (only runs periodically)
             self.prune_devices()
+            await asyncio.sleep(0)
 
         finally:
             # end of async update
@@ -706,6 +714,22 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
         self.stamp_last_update_started = nowstamp
         self.stamp_last_update = monotonic_time_coarse()
         self.last_update_success = True
+
+        # Monitor cycle duration
+        cycle_elapsed = time.monotonic() - cycle_start
+        if cycle_elapsed > 2.0:
+            _LOGGER.error(
+                "Update cycle took %.2fs (devices: %d) — event loop may have been starved",
+                cycle_elapsed,
+                len(self.devices),
+            )
+        elif cycle_elapsed > 0.5:
+            _LOGGER.warning(
+                "Update cycle took %.2fs (devices: %d)",
+                cycle_elapsed,
+                len(self.devices),
+            )
+
         return result_gather_adverts
 
     def _async_gather_advert_data(self):
