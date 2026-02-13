@@ -13,6 +13,8 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from .const import SIGNAL_DEVICE_NEW
 from .entity import BermudaEntity
 
+PARALLEL_UPDATES = 0
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
@@ -69,7 +71,7 @@ class BermudaDeviceTracker(BermudaEntity, BaseTrackerEntity):
 
     _attr_should_poll = False
     _attr_has_entity_name = True
-    _attr_name = "Bermuda Tracker"
+    _attr_translation_key = "bermuda_tracker"
 
     @property
     def unique_id(self):

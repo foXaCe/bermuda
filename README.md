@@ -160,6 +160,17 @@ You can manually install Bermuda by doing the following:
 6. Restart Home Assistant
 7. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "Bermuda BLE Trilateration"
 
+## Removal
+
+To remove the Bermuda integration:
+
+1. In Home Assistant, go to **Settings** → **Devices & Services**
+2. Find **Bermuda BLE Trilateration** and click on it
+3. Click the three-dot menu (⋮) and select **Delete**
+4. Restart Home Assistant
+
+If you installed via HACS, you can also uninstall it from the HACS interface after removing the integration.
+
 <!---->
 
 ## Contributions are welcome!

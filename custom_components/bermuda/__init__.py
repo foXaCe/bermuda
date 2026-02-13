@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 type BermudaConfigEntry = ConfigEntry[BermudaData]
 
 
-@dataclass
+@dataclass(slots=True)
 class BermudaData:
     """Holds global data for Bermuda."""
 

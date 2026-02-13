@@ -3,27 +3,63 @@
     "abort": {
       "single_instance_allowed": "Une seule instance est autorisée."
     },
-    "error": {
-      "auth": "Identifiant ou mot de passe erroné."
-    },
     "step": {
       "user": {
-        "data": {
-          "password": "Mot de passe",
-          "username": "Identifiant"
-        },
         "description": "Si vous avez besoin d'aide pour la configuration, consultez notre [page GitHub](https://github.com/agittins/bermuda)",
-        "title": "Bermuda BLE Trilateration"
+        "title": "Bermuda BLE Trilatération"
       }
     }
   },
   "entity": {
+    "device_tracker": {
+      "bermuda_tracker": {
+        "name": "Suivi Bermuda"
+      }
+    },
+    "number": {
+      "ref_power": {
+        "name": "Puissance de référence à 1m (0 par défaut)"
+      }
+    },
     "sensor": {
+      "active_proxy_count": {
+        "name": "Nombre de proxys actifs"
+      },
       "area": {
         "name": "Zone"
       },
+      "area_last_seen": {
+        "name": "Dernière zone vue"
+      },
+      "area_switch_diagnostic": {
+        "name": "Diagnostic de changement de zone"
+      },
       "distance": {
         "name": "Distance"
+      },
+      "distance_to_scanner": {
+        "name": "Distance vers {scanner_name}"
+      },
+      "floor": {
+        "name": "Étage"
+      },
+      "nearest_rssi": {
+        "name": "RSSI le plus proche"
+      },
+      "nearest_scanner": {
+        "name": "Scanner le plus proche"
+      },
+      "total_device_count": {
+        "name": "Nombre total d'appareils"
+      },
+      "total_proxy_count": {
+        "name": "Nombre total de proxys"
+      },
+      "unfiltered_distance_to_scanner": {
+        "name": "Distance non filtrée vers {scanner_name}"
+      },
+      "visible_device_count": {
+        "name": "Nombre d'appareils visibles"
       }
     }
   },
@@ -34,7 +70,22 @@
     }
   },
   "options": {
+    "description_text": {
+      "calibration_results_intro": "Distances récentes, calculées avec `ref_power = {ref_power}` et `attenuation = {attenuation}` (valeurs du plus récent au plus ancien) :",
+      "calibration_row_estimate": "Estimation (m)",
+      "calibration_row_rssi": "RSSI réel",
+      "calibration_submit_hint": "Après avoir cliqué sur Soumettre, les nouvelles distances seront affichées ici.",
+      "filter_active": "🔍 **Filtrage par :** '{filter_text}'",
+      "found_devices": "**{ibeacon_count} iBeacon, {standard_count} appareil(s) standard, {random_count} appareil(s) MAC aléatoire trouvé(s)**",
+      "pagination_warning": "⚠️ *Trop d'appareils ! Affichage des {max_count} premiers par catégorie. Utilisez les filtres ci-dessous pour affiner la liste.*",
+      "scanner_table_col_address": "Adresse",
+      "scanner_table_col_last_ad": "Dernière annonce",
+      "scanner_table_col_scanner": "Scanner",
+      "scanner_table_title": "État des scanners :",
+      "seconds_ago": "secondes."
+    },
     "error": {
+      "err_scanner_no_record": "Le scanner sélectionné n'a pas (encore) vu cet appareil.",
       "no_devices": "Aucun appareil Bluetooth n'est actuellement signalé par vos scanners. \nVous devrez résoudre ce problème avant que Bermuda puisse être utile.",
       "no_scanners": "Vous devez configurer des scanners Bluetooth avant que Bermuda puisse fonctionner. \nUn proxy Bluetooth ESPHome, un proxy Bluetooth Shelly ou un adaptateur Bluetooth local devrait vous permettre de démarrer.",
       "some_active": "Vous avez au moins quelques appareils actifs, c'est bien."
@@ -53,7 +104,7 @@
           "ref_power": "Pour calibrer ce paramètre, placez l'appareil à 1 mètre du scanner et ajustez la valeur jusqu'à ce que les chiffres ci-dessus reflètent cette distance de 1m. Notez que les valeurs ne seront recalculées qu'après avoir cliqué sur soumettre, et un nombre plus négatif donnera une distance plus courte",
           "save_and_close": "Après avoir été satisfait de la calibration, cochez cette case et cliquez sur Soumettre. Vos modifications seront enregistrées et vous pourrez passer à l'étape de calibration suivante. Laissez cette case non cochée pendant que vous ajustez et testez les paramètres."
         },
-        "description": "Cette étape consiste à établir des valeurs par défaut globales pour les calculs de distance.\n\n{details}\n{summary}\nDévelopper pour les instructions !{summary_end}\n\nDans les étapes suivantes, vous pourrez définir des remplacements par appareil, il est donc logique de choisir votre matériel le plus courant comme « paire de référence » pour cette étape. Par exemple, si la plupart de vos scanners sont ESPHome sur une carte particulière, choisissez l'un d'entre eux comme scanner de référence. De même, si vous avez une poignée d'un modèle particulier de balise, utilisez l'une d'entre elles comme appareil de référence.\n\n- Choisissez un appareil et un scanner ci-dessous à utiliser comme « paire de référence »\n- Placez physiquement l'appareil choisi à 1m (un mètre) du scanner choisi. Assurez-vous qu'ils ont une ligne de visée dégagée l'un vers l'autre et évitez de les placer près de formes de vie organiques qui pourraient interférer avec le signal.\n- Cliquez sur « SOUMETTRE » et notez les valeurs RSSI dans le tableau qui apparaîtra ci-dessous. Vous pouvez cliquer à nouveau sur « SOUMETTRE » à tout moment pour actualiser les valeurs.\n- Une fois que vous avez une intensité de signal stable, mettez cette valeur dans le champ `reference_power` et cliquez sur « SOUMETTRE ».\n- Vous devriez maintenant voir les valeurs mises à jour, et les distances estimées devraient être proches de 1 mètre. Répétez si nécessaire jusqu'à ce que vous soyez satisfait du résultat.\n- Déplacez maintenant l'appareil pour qu'il soit plus loin du scanner et mesurez cette distance avec un mètre ruban. Environ 5 mètres pourrait être une bonne distance - la distance exacte n'a pas d'importance, mais garder une ligne de visée dégagée est important, et vous pourriez trouver que des distances plus longues vous donneront plus de précision, généralement.\n- Avec l'appareil à la nouvelle distance, cliquez à nouveau sur « SOUMETTRE » et vous devriez voir que les mesures les plus récentes refléteront la nouvelle distance, mais seront probablement inexactes.\n- Expérimentez avec différentes valeurs pour `attenuation` et en cliquant sur « SOUMETTRE », jusqu'à ce que vous obteniez que les mesures estimées correspondent à votre mesure physique.\n- Une fois que vous êtes satisfait de la calibration, cochez « Enregistrer et fermer » et cliquez sur « SOUMETTRE ».\n{details_end}\n{suffix}",
+        "description": "Cette étape consiste à établir des valeurs par défaut globales pour les calculs de distance.\n\n{details}\n{summary}\nDévelopper pour les instructions !{summary_end}\n\nDans les étapes suivantes, vous pourrez définir des remplacements par appareil, il est donc logique de choisir votre matériel le plus courant comme « paire de référence » pour cette étape. Par exemple, si la plupart de vos scanners sont ESPHome sur une carte particulière, choisissez l'un d'entre eux comme scanner de référence. De même, si vous avez une poignée d'un modèle particulier de balise, utilisez l'une d'entre elles comme appareil de référence.\n\n- Choisissez un appareil et un scanner ci-dessous à utiliser comme « paire de référence »\n- Placez physiquement l'appareil choisi à 1m (un mètre) du scanner choisi. Assurez-vous qu'ils ont une ligne de visée dégagée l'un vers l'autre et évitez de les placer près de formes de vie organiques qui pourraient interférer avec le signal.\n- Cliquez sur « SOUMETTRE » et notez les valeurs RSSI dans le tableau qui apparaîtra ci-dessous. Vous pouvez cliquer à nouveau sur « SOUMETTRE » à tout moment pour actualiser les valeurs.\n- Une fois que vous avez une intensité de signal stable, mettez cette valeur dans le champ `reference_power` et cliquez sur « SOUMETTRE ».\n- Vous devriez maintenant voir les valeurs mises à jour, et les distances estimées devraient être proches de 1 mètre. Répétez si nécessaire jusqu'à ce que vous soyez satisfait du résultat.\n- Déplacez maintenant l'appareil pour qu'il soit plus loin du scanner et mesurez cette distance avec un mètre ruban. Environ 5 mètres pourrait être une bonne distance - la distance exacte n'a pas d'importance, mais garder une ligne de visée dégagée est important, et vous pourriez trouver que des distances plus longues vous donneront plus de précision, généralement.\n- Avec l'appareil à la nouvelle distance, cliquez à nouveau sur « SOUMETTRE » et vous devriez voir que les mesures les plus récentes reflèteront la nouvelle distance, mais seront probablement inexactes.\n- Expérimentez avec différentes valeurs pour `attenuation` et en cliquant sur « SOUMETTRE », jusqu'à ce que vous obteniez que les mesures estimées correspondent à votre mesure physique.\n- Une fois que vous êtes satisfait de la calibration, cochez « Enregistrer et fermer » et cliquez sur « SOUMETTRE ».\n{details_end}\n{suffix}",
         "title": "Calibration 1 : Globale"
       },
       "calibration2_scanners": {
@@ -71,7 +122,6 @@
       "globalopts": {
         "data": {
           "attenuation": "Atténuation - Facteur d'atténuation de l'environnement pour le calcul/calibrage de la distance.",
-          "configured_devices": "Appareils configurés - Sélectionnez les appareils Bluetooth ou balises à suivre avec les capteurs.",
           "devtracker_nothome_timeout": "Délai d'expiration Devtracker en secondes pour considérer un appareil comme `Absent`.",
           "max_area_radius": "Rayon maximum en mètres pour la détection AREA simple",
           "max_velocity": "Vitesse maximale en mètres par seconde - ignorer les lectures impliquant un mouvement plus rapide que cette limite. 3m/s (10km/h) est une bonne valeur.",

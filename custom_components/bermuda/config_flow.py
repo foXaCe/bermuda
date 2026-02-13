@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING
 
 import voluptuous as vol
@@ -21,6 +22,7 @@ from homeassistant.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
 )
+from homeassistant.helpers.translation import async_get_translations
 
 from .const import (
     ADDR_TYPE_IBEACON,
@@ -136,6 +138,20 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
         self._last_scanner = None
         self._last_attenuation = None
         self._last_scanner_info = None
+        self._translations_cache: dict[str, str] | None = None
+
+    async def _get_options_translation(self, key: str, **kwargs: str) -> str:
+        """Get a translated string from options translations."""
+        if self._translations_cache is None:
+            self._translations_cache = await async_get_translations(
+                self.hass, self.hass.config.language, "options", integrations=[DOMAIN]
+            )
+        full_key = f"component.{DOMAIN}.options.{key}"
+        text = self._translations_cache.get(full_key, "")
+        if kwargs:
+            with contextlib.suppress(KeyError, IndexError):
+                text = text.format(**kwargs)
+        return text
 
     async def async_step_init(self, user_input=None):  # pylint: disable=unused-argument
         """Manage the options."""
@@ -152,21 +168,19 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
         messages["scanner_counter_scanners"] = f"{len(self.coordinator.scanner_list)}"
 
         if len(self.coordinator.scanner_list) == 0:
-            messages["status"] = (
-                "You need to configure some bluetooth scanners before Bermuda will have anything to work with. "
-                "Any one of esphome bluetooth_proxy, Shelly bluetooth proxy or local bluetooth adaptor should get "
-                "you started."
-            )
+            messages["status"] = await self._get_options_translation("error.no_scanners")
         elif active_devices == 0:
-            messages["status"] = (
-                "No bluetooth devices are actively being reported from your scanners. "
-                "You will need to solve this before Bermuda can be of much help."
-            )
+            messages["status"] = await self._get_options_translation("error.no_devices")
         else:
-            messages["status"] = "You have at least some active devices, this is good."
+            messages["status"] = await self._get_options_translation("error.some_active")
 
         # Build a markdown table of scanners so the user can see what's up.
-        scanner_table = "\n\nStatus of scanners:\n\n|Scanner|Address|Last advertisement|\n|---|---|---:|\n"
+        t_title = await self._get_options_translation("description_text.scanner_table_title")
+        t_col_scanner = await self._get_options_translation("description_text.scanner_table_col_scanner")
+        t_col_address = await self._get_options_translation("description_text.scanner_table_col_address")
+        t_col_last_ad = await self._get_options_translation("description_text.scanner_table_col_last_ad")
+        t_seconds_ago = await self._get_options_translation("description_text.seconds_ago")
+        scanner_table = f"\n\n{t_title}\n\n|{t_col_scanner}|{t_col_address}|{t_col_last_ad}|\n|---|---|---:|\n"
         # Use emoji to indicate if age is "good"
         for scanner in self.coordinator.get_active_scanner_summary():
             age = int(scanner.get("last_stamp_age", 999))
@@ -180,7 +194,7 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
             shortmac = mac_redact(scanner.get("address", "ERR"))
             scanner_table += (
                 f"| {scanner.get('name', 'NAME_ERR')}| [{shortmac}]"
-                f"| {status} {(scanner.get('last_stamp_age', DISTANCE_INFINITE)):.2f} seconds ago.|\n"
+                f"| {status} {(scanner.get('last_stamp_age', DISTANCE_INFINITE)):.2f} {t_seconds_ago}|\n"
             )
         messages["status"] += scanner_table
 
@@ -362,24 +376,32 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
 
         # Build description with device counts and filter help
         description_text = (
-            f"**Found {len(options_metadevices)} iBeacon(s), "
-            f"{len(options_otherdevices)} standard device(s), "
-            f"{len(options_randoms)} random MAC device(s)**\n\n"
+            await self._get_options_translation(
+                "description_text.found_devices",
+                ibeacon_count=str(len(options_metadevices)),
+                standard_count=str(len(options_otherdevices)),
+                random_count=str(len(options_randoms)),
+            )
+            + "\n\n"
         )
 
         if show_pagination_warning:
             description_text += (
-                f"⚠️ *Too many devices! Showing first {max_devices_per_category} per category. "
-                "Use the filters below to narrow down the list.*\n\n"
+                await self._get_options_translation(
+                    "description_text.pagination_warning",
+                    max_count=str(max_devices_per_category),
+                )
+                + "\n\n"
             )
 
         if filter_text:
-            description_text += f"🔍 **Filtering by:** '{filter_text}'\n\n"
-
-        description_text += (
-            "💡 **Search:** Type in the search box and click Submit to filter. "
-            "Search by name (e.g., 'tile'), MAC address (e.g., 'd8f2'), or manufacturer (e.g., 'apple')."
-        )
+            description_text += (
+                await self._get_options_translation(
+                    "description_text.filter_active",
+                    filter_text=filter_text,
+                )
+                + "\n\n"
+            )
 
         # Build the form schema with search field
         data_schema = {
@@ -514,12 +536,12 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
             ): vol.Coerce(float),
             vol.Optional(CONF_SAVE_AND_CLOSE, default=False): vol.Coerce(bool),
         }
+        calibration_hint = await self._get_options_translation("description_text.calibration_submit_hint")
         if user_input is None:
             return self.async_show_form(
                 step_id="calibration1_global",
                 data_schema=vol.Schema(data_schema),
-                description_placeholders=_ugly_token_hack
-                | {"suffix": "After you click Submit, the new distances will be shown here."},
+                description_placeholders=_ugly_token_hack | {"suffix": calibration_hint},
             )
         results_str = ""
         device = self._get_bermuda_device_from_registry(user_input[CONF_DEVICES])
@@ -528,10 +550,9 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
             if scanner is None:
                 return self.async_show_form(
                     step_id="calibration1_global",
-                    errors={"err_scanner_no_record": "The selected scanner hasn't (yet) seen this device."},
+                    errors={"base": "err_scanner_no_record"},
                     data_schema=vol.Schema(data_schema),
-                    description_placeholders=_ugly_token_hack
-                    | {"suffix": "After you click Submit, the new distances will be shown here."},
+                    description_placeholders=_ugly_token_hack | {"suffix": calibration_hint},
                 )
 
             distances = [
@@ -541,6 +562,8 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
 
             # Build a markdown table showing distance and rssi history for the
             # selected device / scanner combination
+            t_estimate = await self._get_options_translation("description_text.calibration_row_estimate")
+            t_rssi = await self._get_options_translation("description_text.calibration_row_rssi")
             results_str = f"| {device.name} |"
             # Limit the number of columns to what's available up to a max of 5.
             cols = min(5, len(distances), len(scanner.hist_rssi))
@@ -550,23 +573,25 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
             for i in range(cols):  # noqa for unused var i
                 results_str += "---:|"
 
-            results_str += "\n| Estimate (m) |"
+            results_str += f"\n| {t_estimate} |"
             for i in range(cols):
                 results_str += f" `{distances[i]:>5.2f}`|"
-            results_str += "\n| RSSI Actual |"
+            results_str += f"\n| {t_rssi} |"
             for i in range(cols):
                 results_str += f" `{scanner.hist_rssi[i]:>5}`|"
             results_str += "\n"
 
+        calibration_intro = await self._get_options_translation(
+            "description_text.calibration_results_intro",
+            ref_power=str(self._last_ref_power),
+            attenuation=str(self._last_attenuation),
+        )
         return self.async_show_form(
             step_id="calibration1_global",
             data_schema=vol.Schema(data_schema),
             description_placeholders=_ugly_token_hack
             | {
-                "suffix": (
-                    f"Recent distances, calculated using `ref_power = {self._last_ref_power}` "
-                    f"and `attenuation = {self._last_attenuation}` (values from new...old):\n\n{results_str}"
-                ),
+                "suffix": f"{calibration_intro}\n\n{results_str}",
             },
         )
 
@@ -629,7 +654,9 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
             return self.async_show_form(
                 step_id="calibration2_scanners",
                 data_schema=vol.Schema(data_schema),
-                description_placeholders={"suffix": "After you click Submit, the new distances will be shown here."},
+                description_placeholders={
+                    "suffix": await self._get_options_translation("description_text.calibration_submit_hint")
+                },
             )
         if isinstance(self._last_device, str):
             device = self._get_bermuda_device_from_registry(self._last_device)
@@ -650,7 +677,8 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
                         for historical_rssi in scanneradvert.hist_rssi
                     ]
             # Format the results for display (HA has full markdown support!)
-            results_str = "| Scanner | 0 | 1 | 2 | 3 | 4 |\n|---|---:|---:|---:|---:|---:|"
+            t_scanner = await self._get_options_translation("description_text.scanner_table_col_scanner")
+            results_str = f"| {t_scanner} | 0 | 1 | 2 | 3 | 4 |\n|---|---:|---:|---:|---:|---:|"
             for scanner_name, distances in results.items():
                 results_str += f"\n|{scanner_name}|"
                 for i in range(5):
