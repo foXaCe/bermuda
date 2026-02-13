@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] - 2026-02-13
+
+### Fixed
+- Prevent event loop blocking in update cycle by making `_async_update_data_internal()` truly async with yield points (`asyncio.sleep(0)`) between heavy processing phases and every 20 devices in the calculate loop
+- `async_handle_advert` callback now schedules update via `async_create_task` instead of blocking the event loop
+- Add cycle duration monitoring (warning >500ms, error >2s) to detect slow update cycles
+
 ## [0.9.0] - 2026-02-13
 
 ### Added
