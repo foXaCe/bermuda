@@ -5,7 +5,7 @@
     },
     "step": {
       "user": {
-        "description": "If you need help with the configuration have a look at our [GitHub page](https://github.com/agittins/bermuda)",
+        "description": "If you need help with the configuration have a look at our [GitHub page]({github_url})",
         "title": "Bermuda BLE Trilateration"
       }
     }
@@ -70,20 +70,6 @@
     }
   },
   "options": {
-    "description_text": {
-      "calibration_results_intro": "Recent distances, calculated using `ref_power = {ref_power}` and `attenuation = {attenuation}` (values from new...old):",
-      "calibration_row_estimate": "Estimate (m)",
-      "calibration_row_rssi": "RSSI Actual",
-      "calibration_submit_hint": "After you click Submit, the new distances will be shown here.",
-      "filter_active": "🔍 **Filtering by:** '{filter_text}'",
-      "found_devices": "**Found {ibeacon_count} iBeacon(s), {standard_count} standard device(s), {random_count} random MAC device(s)**",
-      "pagination_warning": "⚠️ *Too many devices! Showing first {max_count} per category. Use the filters below to narrow down the list.*",
-      "scanner_table_col_address": "Address",
-      "scanner_table_col_last_ad": "Last advertisement",
-      "scanner_table_col_scanner": "Scanner",
-      "scanner_table_title": "Status of scanners:",
-      "seconds_ago": "seconds ago."
-    },
     "error": {
       "err_scanner_no_record": "The selected scanner hasn't (yet) seen this device.",
       "no_devices": "No bluetooth devices are actively being reported from your scanners. \nYou will need to solve this before Bermuda can be of much help.",

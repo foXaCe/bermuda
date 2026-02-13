@@ -53,11 +53,11 @@ def mock_advertisement_data():
 def bermuda_advert(mock_parent_device, mock_advertisement_data, mock_scanner_device):
     """Fixture for creating a BermudaAdvert instance."""
     options = {
-        "CONF_RSSI_OFFSETS": {"11:22:33:44:55:66": 5},
-        "CONF_REF_POWER": -59,
-        "CONF_ATTENUATION": 2.0,
-        "CONF_MAX_VELOCITY": 3.0,
-        "CONF_SMOOTHING_SAMPLES": 5,
+        "rssi_offsets": {"11:22:33:44:55:66": 5},
+        "ref_power": -59,
+        "attenuation": 2.0,
+        "max_velocity": 3.0,
+        "smoothing_samples": 5,
     }
     ba = BermudaAdvert(
         parent_device=mock_parent_device,

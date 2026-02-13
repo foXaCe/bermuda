@@ -5,7 +5,7 @@
     },
     "step": {
       "user": {
-        "description": "Si vous avez besoin d'aide pour la configuration, consultez notre [page GitHub](https://github.com/agittins/bermuda)",
+        "description": "Si vous avez besoin d'aide pour la configuration, consultez notre [page GitHub]({github_url})",
         "title": "Bermuda BLE Trilatération"
       }
     }
@@ -70,20 +70,6 @@
     }
   },
   "options": {
-    "description_text": {
-      "calibration_results_intro": "Distances récentes, calculées avec `ref_power = {ref_power}` et `attenuation = {attenuation}` (valeurs du plus récent au plus ancien) :",
-      "calibration_row_estimate": "Estimation (m)",
-      "calibration_row_rssi": "RSSI réel",
-      "calibration_submit_hint": "Après avoir cliqué sur Soumettre, les nouvelles distances seront affichées ici.",
-      "filter_active": "🔍 **Filtrage par :** '{filter_text}'",
-      "found_devices": "**{ibeacon_count} iBeacon, {standard_count} appareil(s) standard, {random_count} appareil(s) MAC aléatoire trouvé(s)**",
-      "pagination_warning": "⚠️ *Trop d'appareils ! Affichage des {max_count} premiers par catégorie. Utilisez les filtres ci-dessous pour affiner la liste.*",
-      "scanner_table_col_address": "Adresse",
-      "scanner_table_col_last_ad": "Dernière annonce",
-      "scanner_table_col_scanner": "Scanner",
-      "scanner_table_title": "État des scanners :",
-      "seconds_ago": "secondes."
-    },
     "error": {
       "err_scanner_no_record": "Le scanner sélectionné n'a pas (encore) vu cet appareil.",
       "no_devices": "Aucun appareil Bluetooth n'est actuellement signalé par vos scanners. \nVous devrez résoudre ce problème avant que Bermuda puisse être utile.",

@@ -37,7 +37,7 @@ repos:
     rev: v2.4.1
     hooks:
       - id: codespell
-        args: ["--skip", "*.json,*.yaml,*.yml,setup.cfg", "--ignore-words-list", "hass,HASS,nd"]
+        args: ["--skip", "*.json,*.yaml,*.yml,setup.cfg", "--ignore-words-list", "hass,HASS,nd,appareil,adresse,annonce"]
 
   - repo: local
     hooks:

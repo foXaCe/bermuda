@@ -54,6 +54,60 @@ from .const import (
 )
 from .util import mac_redact, rssi_to_metres
 
+# Dynamic UI text that is NOT part of HA's translation schema (hassfest rejects
+# custom sections like "description_text").  These are used to build markdown
+# tables and dynamic descriptions in the options flow.
+_DESCRIPTION_TEXTS: dict[str, dict[str, str]] = {
+    "en": {
+        "calibration_results_intro": (
+            "Recent distances, calculated using `ref_power = {ref_power}`"
+            " and `attenuation = {attenuation}` (values from new...old):"
+        ),
+        "calibration_row_estimate": "Estimate (m)",
+        "calibration_row_rssi": "RSSI Actual",
+        "calibration_submit_hint": "After you click Submit, the new distances will be shown here.",
+        "filter_active": "🔍 **Filtering by:** '{filter_text}'",
+        "found_devices": (
+            "**Found {ibeacon_count} iBeacon(s), {standard_count} standard"
+            " device(s), {random_count} random MAC device(s)**"
+        ),
+        "pagination_warning": (
+            "⚠️ *Too many devices! Showing first {max_count} per category."
+            " Use the filters below to narrow down the list.*"
+        ),
+        "scanner_table_col_address": "Address",
+        "scanner_table_col_last_ad": "Last advertisement",
+        "scanner_table_col_scanner": "Scanner",
+        "scanner_table_title": "Status of scanners:",
+        "seconds_ago": "seconds ago.",
+    },
+    "fr": {
+        "calibration_results_intro": (
+            "Distances récentes, calculées avec `ref_power = {ref_power}`"
+            " et `attenuation = {attenuation}` (valeurs du plus récent au plus ancien) :"
+        ),
+        "calibration_row_estimate": "Estimation (m)",
+        "calibration_row_rssi": "RSSI réel",
+        "calibration_submit_hint": "Après avoir cliqué sur Soumettre, les nouvelles distances seront affichées ici.",
+        "filter_active": "🔍 **Filtrage par :** '{filter_text}'",
+        "found_devices": (
+            "**{ibeacon_count} iBeacon, {standard_count} appareil(s) standard,"
+            " {random_count} appareil(s) MAC aléatoire trouvé(s)**"
+        ),
+        "pagination_warning": (
+            "⚠️ *Trop d'appareils ! Affichage des {max_count} premiers par catégorie."
+            " Utilisez les filtres ci-dessous pour affiner la liste.*"
+        ),
+        "scanner_table_col_address": "Adresse",
+        "scanner_table_col_last_ad": "Dernière annonce",
+        "scanner_table_col_scanner": "Scanner",
+        "scanner_table_title": "État des scanners :",
+        "seconds_ago": "secondes.",
+    },
+}
+
+_GITHUB_URL = "https://github.com/agittins/bermuda"
+
 if TYPE_CHECKING:
     from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
     from homeassistant.config_entries import ConfigFlowResult
@@ -91,7 +145,7 @@ class BermudaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(DOMAIN)
         self._abort_if_unique_id_configured()
 
-        return self.async_show_form(step_id="user", description_placeholders={"name": NAME})
+        return self.async_show_form(step_id="user", description_placeholders={"name": NAME, "github_url": _GITHUB_URL})
 
     async def async_step_user(self, user_input=None):
         """
@@ -107,7 +161,7 @@ class BermudaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             # create the integration!
             return self.async_create_entry(title=NAME, data={"source": "user"}, description=NAME)
 
-        return self.async_show_form(step_id="user", description_placeholders={"name": NAME})
+        return self.async_show_form(step_id="user", description_placeholders={"name": NAME, "github_url": _GITHUB_URL})
 
     @staticmethod
     @callback
@@ -141,13 +195,25 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
         self._translations_cache: dict[str, str] | None = None
 
     async def _get_options_translation(self, key: str, **kwargs: str) -> str:
-        """Get a translated string from options translations."""
-        if self._translations_cache is None:
-            self._translations_cache = await async_get_translations(
-                self.hass, self.hass.config.language, "options", integrations=[DOMAIN]
-            )
-        full_key = f"component.{DOMAIN}.options.{key}"
-        text = self._translations_cache.get(full_key, "")
+        """
+        Get a translated string from options translations.
+
+        Keys starting with "description_text." are resolved from the inline
+        _DESCRIPTION_TEXTS dict (not part of HA's translation schema).
+        All other keys are fetched via async_get_translations.
+        """
+        if key.startswith("description_text."):
+            sub_key = key.removeprefix("description_text.")
+            lang = self.hass.config.language
+            texts = _DESCRIPTION_TEXTS.get(lang, _DESCRIPTION_TEXTS["en"])
+            text = texts.get(sub_key, _DESCRIPTION_TEXTS["en"].get(sub_key, ""))
+        else:
+            if self._translations_cache is None:
+                self._translations_cache = await async_get_translations(
+                    self.hass, self.hass.config.language, "options", integrations=[DOMAIN]
+                )
+            full_key = f"component.{DOMAIN}.options.{key}"
+            text = self._translations_cache.get(full_key, "")
         if kwargs:
             with contextlib.suppress(KeyError, IndexError):
                 text = text.format(**kwargs)
