@@ -32,7 +32,9 @@ jobs:
           cache: pip
 
       - name: Install pip-audit
-        run: pipx install pip-audit
+        # pip (not pipx): pipx would install against the runner's system
+        # Python 3.12, which cannot resolve homeassistant>=2026.3 (needs 3.14).
+        run: pip install pip-audit
 
       - name: Audit manifest.json (HA integration requirements)
         run: |
@@ -62,11 +64,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       # No floating v2 tag exists on this action — pin the latest release.
+      # (--skip-git was an osv-scanner v1 flag, removed in v2.)
       - uses: google/osv-scanner-action/osv-scanner-action@v2.3.8
         with:
           scan-args: |
             --recursive
-            --skip-git
             ./
 
   secret-scan:
