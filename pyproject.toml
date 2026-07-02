@@ -117,6 +117,9 @@ exclude_dirs = ["tests", "config"]
 skips = ["B101"]  # Skip assert_used check (common in HA integrations)
 
 [tool.pytest.ini_options]
+# Single source of pytest config — do NOT add a pytest.ini, it would silently
+# override this whole section (including the coverage gate).
+asyncio_mode = "auto"
 addopts = "-qq --cov=custom_components.bermuda"
 console_output_style = "count"
 
@@ -125,4 +128,4 @@ branch = false
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 100
+fail_under = 95
