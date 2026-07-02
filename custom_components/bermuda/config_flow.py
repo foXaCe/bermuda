@@ -23,16 +23,10 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigFlowResult
 
 
-# from homeassistant import data_entry_flow
-
-# from homeassistant.helpers.aiohttp_client import async_create_clientsession
-
-
 class BermudaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for bermuda."""
 
     VERSION = 2  # v2: per-scanner RSSI offsets moved from options into subentries
-    # CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 
     def __init__(self) -> None:
         """Initialize."""
@@ -88,13 +82,3 @@ class BermudaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             SUBENTRY_TYPE_CALIBRATION: BermudaCalibrationSubentryFlow,
             SUBENTRY_TYPE_DEVICE: BermudaDeviceSubentryFlow,
         }
-
-    # async def _show_config_form(self, user_input):  # pylint: disable=unused-argument
-    #     """Show the configuration form to edit location data."""
-    #     return self.async_show_form(
-    #         step_id="user",
-    #         data_schema=vol.Schema(
-    #             {vol.Required(CONF_USERNAME): str, vol.Required(CONF_PASSWORD): str}
-    #         ),
-    #         errors=self._errors,
-    #     )

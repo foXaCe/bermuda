@@ -208,9 +208,6 @@ class BermudaDataUpdateCoordinator(
             monotonic_time_coarse() + SAVEOUT_COOLDOWN
         )  # Stamp for save-out requests
 
-        # AJG 2025-04-23 Disabling, see the commented method below for notes.
-        # self.config_entry.async_on_unload(self.hass.bus.async_listen(EVENT_STATE_CHANGED, self.handle_state_changes))
-
         # First time around we freshen the restored scanner info by
         # forcing a scan of the captured info.
         self._scanner_init_pending = True
@@ -277,7 +274,6 @@ class BermudaDataUpdateCoordinator(
         }
 
         self.devices: dict[str, BermudaDevice] = {}
-        # self.updaters: dict[str, BermudaPBDUCoordinator] = {}
 
         # Micro-location (sub-area RF fingerprinting) + the MCP-friendly services.
         self._microloc_init(hass, entry)
