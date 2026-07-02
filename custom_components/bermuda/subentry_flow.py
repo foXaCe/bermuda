@@ -137,7 +137,9 @@ class BermudaDeviceSubentryFlow(ConfigSubentryFlow):
     """Per-device enrollment: name + reference power + away timeout as a config subentry."""
 
     @staticmethod
-    def _fields(name: str = "", ref_power: float = DEFAULT_REF_POWER, timeout: int = DEFAULT_DEVTRACK_TIMEOUT) -> dict:
+    def _fields(
+        name: str = "", ref_power: float = DEFAULT_REF_POWER, timeout: int = DEFAULT_DEVTRACK_TIMEOUT
+    ) -> dict[vol.Marker, Any]:
         return {
             vol.Optional(CONF_NAME, default=name): TextSelector(),
             vol.Required(CONF_REF_POWER, default=ref_power): _ref_power_selector(),

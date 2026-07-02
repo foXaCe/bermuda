@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 from bluetooth_data_tools import monotonic_time_coarse
 
 if TYPE_CHECKING:
     import logging
     from typing import Any
+
+
+class _KeyCacheEntry(TypedDict):
+    """Rate-limit bookkeeping for a single log key."""
+
+    stamp: float
+    count: int
 
 
 class BermudaLogSpamLess:
@@ -26,7 +33,7 @@ class BermudaLogSpamLess:
         self._logger = logger
         self._interval = spam_interval
         # Per-instance cache so multiple instances don't share rate-limit state.
-        self._keycache: dict[str, dict] = {}
+        self._keycache: dict[str, _KeyCacheEntry] = {}
 
     def _check_key(self, key: str) -> int:
         """

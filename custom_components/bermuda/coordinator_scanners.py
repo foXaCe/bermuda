@@ -23,11 +23,27 @@ from .const import (
 from .util import mac_norm
 
 if TYPE_CHECKING:
+    from habluetooth import BaseHaScanner
+    from homeassistant.core import HomeAssistant
+
     from .bermuda_device import BermudaDevice
 
 
 class BermudaScannerMixin:
     """Scanner roster discovery, rebuild, purge and area-repair, mixed into the coordinator."""
+
+    if TYPE_CHECKING:
+        # Attributes/methods provided by BermudaDataUpdateCoordinator, the concrete
+        # class this mixin is always combined into (see coordinator.py:__init__).
+        # Declared here only so mypy can see them; nothing here runs at import time.
+        hass: HomeAssistant
+        devices: dict[str, BermudaDevice]
+        _hascanners: set[BaseHaScanner]
+        _scanner_list: set[str]
+        _scanners: set[BermudaDevice]
+        _scanners_without_areas: list[str] | None
+
+        def _get_or_create_device(self, address: str) -> BermudaDevice: ...
 
     @property
     def scanner_list(self) -> set[str]:

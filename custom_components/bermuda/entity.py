@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from bluetooth_data_tools import monotonic_time_coarse
 from homeassistant.core import callback
@@ -51,9 +51,9 @@ class BermudaEntity(CoordinatorEntity[BermudaDataUpdateCoordinator]):
         self.bermuda_last_state: Any = 0
         self.bermuda_last_stamp: float = 0
 
-    def _cached_ratelimit(
-        self, statevalue: Any, *, fast_falling: bool = True, fast_rising: bool = False, interval: int | None = None
-    ) -> Any:
+    def _cached_ratelimit[T](
+        self, statevalue: T, *, fast_falling: bool = True, fast_rising: bool = False, interval: int | None = None
+    ) -> T:
         """
         Uses the CONF_UPDATE_INTERVAL and other logic to return either the given statevalue
         or an older, cached value. Helps to reduce excess sensor churn without compromising latency.
@@ -80,8 +80,10 @@ class BermudaEntity(CoordinatorEntity[BermudaDataUpdateCoordinator]):
             self.bermuda_last_state = statevalue
             return statevalue
         else:
-            # Send the cached value, don't update cache
-            return self.bermuda_last_state
+            # Send the cached value, don't update cache.
+            # bermuda_last_state is Any (it caches whatever value-type this entity's
+            # native_value has been passing in, consistently, across calls).
+            return cast("T", self.bermuda_last_state)
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -146,7 +148,10 @@ class BermudaEntity(CoordinatorEntity[BermudaDataUpdateCoordinator]):
             # No need to set model, since MAC address will be shown via connection.
 
         device_info = dr.DeviceInfo(
-            identifiers={(domain_name, self._device.unique_id)},
+            # BermudaDevice.unique_id is set (to a str) in __init__ and only ever
+            # reassigned to another str (see BermudaScannerDeviceMixin); it is typed
+            # Optional only to mirror Entity.unique_id's own signature.
+            identifiers={(domain_name, cast("str", self._device.unique_id))},
             connections=connections,
             name=self._device.name,
         )

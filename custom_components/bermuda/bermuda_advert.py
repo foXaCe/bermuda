@@ -26,6 +26,8 @@ from .const import (
     CONF_REF_POWER,
     CONF_RSSI_OFFSETS,
     CONF_SMOOTHING_SAMPLES,
+    DEFAULT_MAX_VELOCITY,
+    DEFAULT_SMOOTHING_SAMPLES,
     DISTANCE_TIMEOUT,
     HIST_KEEP_COUNT,
     MOBILITY_STATIONARY,
@@ -89,15 +91,17 @@ class BermudaAdvert:
         self.hist_rssi: list[int] = []
         self.hist_rssi_adjusted: list[float] = []  # offset-adjusted RSSI samples (pre-filter)
         self.hist_rssi_filtered: list[float] = []  # filtered RSSI history (for dispersion)
-        self.hist_distance: list[float] = []
-        self.hist_distance_by_interval: list[float] = []  # updated per-interval
-        self.hist_interval = []  # WARNING: This is actually "age of ad when we polled"
+        self.hist_distance: list[float | None] = []
+        self.hist_distance_by_interval: list[float | None] = []  # updated per-interval
+        self.hist_interval: list[float | None] = []  # WARNING: This is actually "age of ad when we polled"
         self.hist_velocity: list[float] = []  # Effective velocity versus previous stamped reading
         self.conf_rssi_offset = self.options.get(CONF_RSSI_OFFSETS, {}).get(self.scanner_address, 0)
         self.conf_ref_power = self.options.get(CONF_REF_POWER)
         self.conf_attenuation = self.options.get(CONF_ATTENUATION)
-        self.conf_max_velocity = self.options.get(CONF_MAX_VELOCITY)
-        self.conf_smoothing_samples = self.options.get(CONF_SMOOTHING_SAMPLES)
+        # Coordinator always seeds these two into options before any advert is
+        # created; the fallback here is purely defensive (matches the same default).
+        self.conf_max_velocity: float = self.options.get(CONF_MAX_VELOCITY, DEFAULT_MAX_VELOCITY)
+        self.conf_smoothing_samples: int = self.options.get(CONF_SMOOTHING_SAMPLES, DEFAULT_SMOOTHING_SAMPLES)
         self.local_name: list[tuple[str, bytes]] = []
         self.manufacturer_data: list[dict[int, bytes]] = []
         self.service_data: list[dict[str, bytes]] = []

@@ -125,7 +125,7 @@ class BermudaDataUpdateCoordinator(
         entry: BermudaConfigEntry,
     ) -> None:
         """Initialize."""
-        self.platforms = []
+        self.platforms: list[str] = []
 
         self.sensor_interval = entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
 
@@ -147,8 +147,8 @@ class BermudaDataUpdateCoordinator(
         self.stamp_last_update_started: float = 0
         self.stamp_last_prune: float = 0  # When we last pruned device list
 
-        self.member_uuids = {}
-        self.company_uuids = {}
+        self.member_uuids: dict[int, str] = {}
+        self.company_uuids: dict[int, str] = {}
 
         super().__init__(
             hass,
@@ -163,6 +163,10 @@ class BermudaDataUpdateCoordinator(
                 immediate=False,
             ),
         )
+        # DataUpdateCoordinator types config_entry as ConfigEntry | None (it can fall
+        # back to a ContextVar), but Bermuda always constructs this coordinator with an
+        # explicit entry (see async_setup_entry), so narrow it here for every call site.
+        self.config_entry: BermudaConfigEntry = entry
 
         self._waitingfor_load_manufacturer_ids = True
         entry.async_create_background_task(
@@ -218,7 +222,7 @@ class BermudaDataUpdateCoordinator(
             self.hass.bus.async_listen(EVENT_DEVICE_REGISTRY_UPDATED, self.handle_devreg_changes)
         )
 
-        self.options = {}
+        self.options: dict[str, Any] = {}
 
         # Initialize with defaults for backward compatibility with older config entries
         self.options[CONF_ATTENUATION] = DEFAULT_ATTENUATION
@@ -261,7 +265,7 @@ class BermudaDataUpdateCoordinator(
         # keyed by upper-case address. Applied to each device as it is created, and
         # read for the per-device away timeout. The subentry is the source of truth;
         # the ref_power number entity remains for live, in-session tweaks.
-        self.device_config: dict[str, dict] = {
+        self.device_config: dict[str, dict[str, Any]] = {
             se.data[CONF_ADDRESS].upper(): dict(se.data)
             for se in getattr(entry, "subentries", {}).values()
             if se.subentry_type == SUBENTRY_TYPE_DEVICE and se.data.get(CONF_ADDRESS)
@@ -513,7 +517,7 @@ class BermudaDataUpdateCoordinator(
                 fresh_count += 1
         return fresh_count
 
-    def get_active_scanner_summary(self) -> list[dict]:
+    def get_active_scanner_summary(self) -> list[dict[str, Any]]:
         """
         Returns a list of dicts suitable for seeing which scanners
         are configured in the system and how long it has been since
@@ -796,21 +800,23 @@ class BermudaDataUpdateCoordinator(
             current_distance = device.area_distance
             current_area_id = device.area_id
 
-            best_area_id: str | None = None
-            best_distance: float | None = None
+            # Kept as a single Optional pair (rather than two separately-Optional
+            # variables) so the "we have a winner" narrowing below covers both at once.
+            best: tuple[str, float] | None = None
             for area_id, (_area_name, virtual_dist) in triggered_areas.items():
                 if current_area_id == area_id:
                     # Already here via BLE: the entity only "wins" if it is virtually closer.
                     if current_distance is not None and current_distance <= virtual_dist:
                         continue
-                    best_area_id, best_distance = area_id, virtual_dist
+                    best = (area_id, virtual_dist)
                     break
                 if (current_distance is None or virtual_dist < current_distance) and (
-                    best_area_id is None or virtual_dist < best_distance
+                    best is None or virtual_dist < best[1]
                 ):
-                    best_area_id, best_distance = area_id, virtual_dist
+                    best = (area_id, virtual_dist)
 
-            if best_area_id is not None:
+            if best is not None:
+                best_area_id, best_distance = best
                 old_area = device.area_name
                 device.apply_area_override(best_area_id, best_distance)
                 if old_area != device.area_name:
@@ -825,7 +831,7 @@ class BermudaDataUpdateCoordinator(
 
     async def service_dump_devices(self, call: ServiceCall) -> ServiceResponse:
         """Return a dump of beacon advertisements by receiver."""
-        out = {}
+        out: dict[str, Any] = {}
         addresses_input = call.data.get("addresses", "")
         redact = call.data.get("redact", False)
         configured_devices = call.data.get("configured_devices", False)
@@ -852,7 +858,7 @@ class BermudaDataUpdateCoordinator(
 
         if redact:
             _stamp_redact = monotonic_time_coarse()
-            out = cast("ServiceResponse", self.redact_data(out))
+            out = cast("dict[str, Any]", self.redact_data(out))
             _stamp_redact_elapsed = monotonic_time_coarse() - _stamp_redact
             if _stamp_redact_elapsed > 3:  # It should be fast now.
                 _LOGGER.warning("Dump devices redaction took %.2f seconds", _stamp_redact_elapsed)

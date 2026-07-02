@@ -112,6 +112,12 @@ voluptuous = "vol"
 "homeassistant.helpers.label_registry" = "lr"
 "homeassistant.util.dt" = "dt_util"
 
+[tool.mypy]
+python_version = "3.13"
+strict = true
+files = ["custom_components/bermuda"]
+warn_unused_ignores = true
+
 [tool.bandit]
 exclude_dirs = ["tests", "config"]
 skips = ["B101"]  # Skip assert_used check (common in HA integrations)

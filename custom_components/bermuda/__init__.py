@@ -8,7 +8,8 @@ https://github.com/foXaCe/bermuda
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from types import MappingProxyType
+from typing import TYPE_CHECKING, cast
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntryState, ConfigSubentry
@@ -37,6 +38,7 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse
     from homeassistant.helpers.device_registry import DeviceEntry
+    from homeassistant.helpers.typing import ConfigType
 
 type BermudaConfigEntry = ConfigEntry[BermudaData]
 
@@ -68,7 +70,7 @@ SERVICE_ENROL_PRIVATE_DEVICE_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up Bermuda services."""
 
     async def async_dump_devices(call: ServiceCall) -> ServiceResponse:
@@ -79,8 +81,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         if not loaded_entries:
             raise ServiceValidationError(translation_domain=DOMAIN, translation_key="not_loaded")
 
-        coordinator = loaded_entries[0].runtime_data.coordinator
-        return await coordinator.service_dump_devices(call)
+        # async_entries() returns bare ConfigEntry (generic Any); narrow to ours.
+        entry = cast("BermudaConfigEntry", loaded_entries[0])
+        return await entry.runtime_data.coordinator.service_dump_devices(call)
 
     async def async_enrol_private(call: ServiceCall) -> None:
         """Create a private_ble_device entry from an IRK so Bermuda tracks it."""
@@ -145,7 +148,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: BermudaConfigEn
             hass.config_entries.async_add_subentry(
                 config_entry,
                 ConfigSubentry(
-                    data={CONF_SCANNER: scanner, CONF_RSSI_OFFSET: offset},
+                    data=MappingProxyType({CONF_SCANNER: scanner, CONF_RSSI_OFFSET: offset}),
                     subentry_type=SUBENTRY_TYPE_CALIBRATION,
                     title=scanner,
                     unique_id=scanner,

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import contextlib
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import voluptuous as vol
 from bluetooth_data_tools import monotonic_time_coarse
@@ -87,10 +87,10 @@ class BermudaOptionsFlowHandler(OptionsFlow):
         self.coordinator: BermudaDataUpdateCoordinator
         self.devices: dict[str, BermudaDevice]
         self._translations_cache: dict[str, str] | None = None
-        self._options: dict | None = None
+        self._options: dict[str, Any] | None = None
 
     @property
-    def options(self) -> dict:
+    def options(self) -> dict[str, Any]:
         """Return a mutable working copy of the config entry options."""
         if self._options is None:
             self._options = deepcopy(dict(self.config_entry.options))
@@ -189,7 +189,9 @@ class BermudaOptionsFlowHandler(OptionsFlow):
             return await self._update_options()
 
         def _opt(key: str, default: float) -> float:
-            return self.options.get(key, default)
+            # self.options is a loosely-typed working copy of config_entry.options;
+            # these keys are always numeric config values.
+            return cast("float", self.options.get(key, default))
 
         def _float(min_: float | None = None, max_: float | None = None) -> vol.All:
             return vol.All(vol.Coerce(float), vol.Range(min=min_, max=max_))

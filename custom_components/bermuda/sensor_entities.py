@@ -25,7 +25,10 @@ from .entity import BermudaEntity
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from homeassistant.helpers.typing import StateType
+
     from . import BermudaConfigEntry
+    from .bermuda_device import BermudaDevice
     from .coordinator import BermudaDataUpdateCoordinator
 
 
@@ -44,8 +47,14 @@ class BermudaSensor(BermudaEntity, SensorEntity):
         return self._device.unique_id
 
     @property
-    def native_value(self) -> str:
-        """Return the state of the sensor."""
+    def native_value(self) -> StateType:
+        """
+        Return the state of the sensor.
+
+        Typed as the broad ``StateType`` (rather than just ``str``) because the
+        numeric subclasses below (rssi/range/in100 sensors) override this with
+        ``float | None``; overrides must be return-type-compatible with this base.
+        """
         # Return not_home when device is not detected, for consistency with device_tracker
         if self._device.area_name is None:
             return STATE_NOT_HOME
@@ -77,8 +86,8 @@ class BermudaSensor(BermudaEntity, SensorEntity):
             ADDR_TYPE_PRIVATE_BLE_DEVICE,
         ]:
             # Check the current sources and find the latest
-            current_mac: str = STATE_UNAVAILABLE
-            _best_stamp = 0
+            current_mac = STATE_UNAVAILABLE
+            _best_stamp: float = 0
             for source_ad in self._device.adverts.values():
                 if source_ad.stamp > _best_stamp:  # It's a valid ad
                     current_mac = source_ad.device_address
@@ -87,7 +96,7 @@ class BermudaSensor(BermudaEntity, SensorEntity):
         # Limit how many attributes we list - prefer new sensors instead
         # since oft-changing attribs cause more db writes than sensors
         # "last_seen": self.coordinator.dt_mono_to_datetime(self._device.last_seen),
-        attribs = {}
+        attribs: dict[str, Any] = {}
         if self._attr_translation_key in ("area", "floor"):
             attribs["area_id"] = self._device.area_id
             attribs["area_name"] = self._device.area_name
@@ -240,10 +249,14 @@ class BermudaSensorScannerRange(BermudaSensorRange):
         self.coordinator = coordinator
         self.config_entry = config_entry
         self._device = coordinator.devices[address]
-        self._scanner = coordinator.devices.get(scanner_address)
-        if self._scanner is None:
+        _scanner = coordinator.devices.get(scanner_address)
+        if _scanner is None:
             msg = f"Scanner device {scanner_address} not found in coordinator.devices"
             raise KeyError(msg)
+        # Declared non-Optional (unlike the dict .get() above): the raise above
+        # guarantees this is always set for the lifetime of the entity, and every
+        # property below relies on that.
+        self._scanner: BermudaDevice = _scanner
 
     @property
     def available(self) -> bool:
@@ -255,9 +268,19 @@ class BermudaSensorScannerRange(BermudaSensorRange):
         # Retaining legacy wifi mac for unique_id
         return f"{self._device.unique_id}_{self._scanner.address_wifi_mac or self._scanner.address}_range"
 
-    @property
+    @property  # type: ignore[misc]
     def translation_placeholders(self) -> dict[str, str]:
-        """Return translation placeholders for dynamic entity name."""
+        """
+        Return translation placeholders for dynamic entity name.
+
+        HA's ``Entity.translation_placeholders`` is a ``@final @cached_property``
+        (integrations are meant to set ``_attr_translation_placeholders`` instead).
+        This override is intentional: unlike an attribute set once at construction,
+        it recomputes ``scanner_name`` from ``self._scanner.name`` on every access,
+        so a later scanner rename is reflected immediately. `@final` isn't enforced
+        by CPython, so this works; the ignore only silences mypy's (correct) note
+        that HA does not want subclasses overriding this.
+        """
         return {"scanner_name": self._scanner.name}
 
     @property
@@ -309,7 +332,7 @@ class BermudaSensorScannerRangeRaw(BermudaSensorScannerRange):
         Don't break if that scanner's never heard of us!
         """
         devscanner = self._device.get_scanner(self._scanner.address)
-        distance = getattr(devscanner, "rssi_distance_raw", None)
+        distance = devscanner.rssi_distance_raw if devscanner is not None else None
         if distance is not None:
             return round(distance, 3)
         return None

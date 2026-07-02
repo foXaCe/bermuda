@@ -7,6 +7,8 @@ Bluetooth scanner/proxy (registry resolution, area/floor, stamps).
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, cast
+
 from bluetooth_data_tools import monotonic_time_coarse
 from homeassistant.components.bluetooth import (
     BaseHaRemoteScanner,
@@ -22,9 +24,53 @@ from .const import (
 )
 from .util import mac_math_offset
 
+if TYPE_CHECKING:
+    # Imported directly (not as the `ar`/`fr`-aliased modules) so these type-only
+    # names don't shadow the `ar`/`fr` attributes declared below.
+    from homeassistant.helpers.area_registry import AreaEntry, AreaRegistry
+    from homeassistant.helpers.floor_registry import FloorEntry, FloorRegistry
+
+    from .bermuda_device import BermudaDevice
+    from .coordinator import BermudaDataUpdateCoordinator
+
 
 class BermudaScannerDeviceMixin:
     """Scanner-device behaviour, mixed into BermudaDevice."""
+
+    if TYPE_CHECKING:
+        # Attributes/methods provided by BermudaDevice, the concrete class this
+        # mixin is always combined into (see BermudaDevice.__init__). Declared
+        # here only so mypy can see them; nothing in this block runs at import time.
+        address: str
+        name: str
+        ar: AreaRegistry
+        fr: FloorRegistry
+        _coordinator: BermudaDataUpdateCoordinator
+        _hascanner: BaseHaRemoteScanner | BaseHaScanner | None
+        _is_scanner: bool
+        _is_remote_scanner: bool | None
+        stamps: dict[str, float]
+        metadevice_sources: list[str]
+        entry_id: str | None
+        scanner_entity_id: str | None
+        address_ble_mac: str
+        address_wifi_mac: str | None
+        unique_id: str | None
+        name_devreg: str | None
+        name_by_user: str | None
+        area: AreaEntry | None
+        area_id: str | None
+        area_name: str | None
+        area_icon: str
+        area_is_unknown: bool
+        floor: FloorEntry | None
+        floor_id: str | None
+        floor_name: str | None
+        floor_icon: str
+        floor_level: int | None
+        last_seen: float
+
+        def make_name(self) -> str: ...
 
     @property
     def is_scanner(self) -> bool:
@@ -38,7 +84,9 @@ class BermudaScannerDeviceMixin:
         """Call when this device is unregistered as a BaseHaScanner."""
         self._is_scanner = False
         self._is_remote_scanner = False
-        self._coordinator.scanner_list_del(self)
+        # self is always a BermudaDevice at runtime (the mixin is only ever combined
+        # with it); mypy can't see that from within the mixin's own class body.
+        self._coordinator.scanner_list_del(cast("BermudaDevice", self))
 
     def async_as_scanner_init(self, ha_scanner: BaseHaScanner) -> None:
         """
@@ -62,7 +110,7 @@ class BermudaScannerDeviceMixin:
             self._is_remote_scanner = True
         else:
             self._is_remote_scanner = False
-        self._coordinator.scanner_list_add(self)
+        self._coordinator.scanner_list_add(cast("BermudaDevice", self))
 
         # Find the relevant device entries in HA for this scanner and apply the names, addresses etc
         self.async_as_scanner_resolve_device_entries()
@@ -324,8 +372,8 @@ class BermudaScannerDeviceMixin:
         # Only Remote ha scanners provide explicit timestamps...
         if self.is_remote_scanner:
             # Set typing ignore to avoid cost of an if isinstance, since is_remote_scanner already implies
-            # that ha_scanner is a BaseHaRemoteScanner.
-            self.stamps = self._hascanner.discovered_device_timestamps  # type: ignore
+            # that ha_scanner is a BaseHaRemoteScanner (hence non-None here too).
+            self.stamps = self._hascanner.discovered_device_timestamps  # type: ignore[union-attr]
 
     def async_as_scanner_get_stamp(self, address: str) -> float | None:
         """

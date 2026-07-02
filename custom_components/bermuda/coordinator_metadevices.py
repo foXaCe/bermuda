@@ -21,11 +21,35 @@ from .const import (
 from .util import mac_norm
 
 if TYPE_CHECKING:
+    from typing import Any
+
+    from homeassistant.core import HomeAssistant
+
+    # Imported directly (not as the `dr`/`er`-aliased modules) so these type-only
+    # names don't shadow the `dr`/`er` attributes declared below.
+    from homeassistant.helpers.device_registry import DeviceRegistry
+    from homeassistant.helpers.entity_registry import EntityRegistry
+
     from .bermuda_device import BermudaDevice
 
 
 class BermudaMetadeviceMixin:
     """Metadevice discovery and per-cycle update, mixed into the coordinator."""
+
+    if TYPE_CHECKING:
+        # Attributes/methods provided by BermudaDataUpdateCoordinator, the concrete
+        # class this mixin is always combined into (see coordinator.py:__init__).
+        # Declared here only so mypy can see them; nothing here runs at import time.
+        hass: HomeAssistant
+        er: EntityRegistry
+        dr: DeviceRegistry
+        options: dict[str, Any]
+        pb_state_sources: dict[str, str | None]
+        metadevices: dict[str, BermudaDevice]
+        _do_private_device_init: bool
+
+        def _get_or_create_device(self, address: str) -> BermudaDevice: ...
+        def _get_device(self, address: str) -> BermudaDevice | None: ...
 
     def discover_private_ble_metadevices(self) -> None:
         """

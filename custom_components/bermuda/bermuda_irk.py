@@ -15,7 +15,7 @@ from .const import _LOGGER, DOMAIN, PRUNE_TIME_KNOWN_IRK, IrkTypes
 from .util import address_is_resolvable
 
 if TYPE_CHECKING:
-    from cryptography.hazmat.primitives.ciphers import Cipher
+    from cryptography.hazmat.primitives.ciphers import Cipher, modes
     from homeassistant.components.bluetooth import BluetoothCallback
 
 type Cancellable = Callable[[], None]
@@ -38,13 +38,13 @@ class BermudaIrkManager:
     """
 
     def __init__(self) -> None:
-        self._irks: dict[bytes, Cipher] = {}
+        self._irks: dict[bytes, Cipher[modes.ECB]] = {}
         self._macs: dict[str, ResolvableMAC] = {}
         self._irk_callbacks: dict[bytes, list[BluetoothCallback]] = {}
 
     def add_irk(self, irk: bytes) -> list[str]:
         """Adds an IRK to the internal list. Returns matching MACs, if any."""
-        macs = []
+        macs: list[str] = []
         if irk not in self._irks:
             # Save new irk and cipher
             self._irks[irk] = cipher = get_cipher_for_irk(irk)
@@ -132,11 +132,12 @@ class BermudaIrkManager:
             return self._update_saved_mac(address, IrkTypes.NO_KNOWN_IRK_MATCH.value)
         return self._update_saved_mac(address, IrkTypes.NOT_RESOLVABLE_ADDRESS.value)
 
-    def _validate_mac_irk(self, address: str, irk: bytes, cipher: Cipher | None) -> bytes:
+    def _validate_mac_irk(self, address: str, irk: bytes, cipher: Cipher[modes.ECB] | None) -> bytes | None:
         """
         Checks address against a given IRK.
 
-        Returns the matching IRK on success, or an IrkType
+        Returns the matching IRK on success, an IrkType, or None if no cipher
+        could be obtained/prepared for the given IRK (should not happen).
         """
         if not cipher:
             cipher = self._irks.get(irk, get_cipher_for_irk(irk))
@@ -186,7 +187,7 @@ class BermudaIrkManager:
         """
         # Create bare-shell classes to satisfy the callback signature
         # (bleak >= 1.0, i.e. HA >= 2025.8: BLEDevice takes 3 params, no rssi)
-        bledevice = BLEDevice(mac, "", None)  # type: ignore
+        bledevice = BLEDevice(mac, "", None)
         service_info = BluetoothServiceInfoBleak("", mac, 0, {}, {}, [], DOMAIN, bledevice, None, False, False, 0)
 
         if callbacks := self._irk_callbacks.get(irk):

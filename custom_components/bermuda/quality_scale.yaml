@@ -90,5 +90,5 @@ rules:
     status: exempt
     comment: No web session; the integration is local BLE only.
   strict-typing:
-    status: todo
-    comment: Several ANN/typing ruff rules are still disabled in pyproject.toml.
+    status: done
+    comment: mypy --strict passes with zero errors ([tool.mypy] in pyproject.toml); ANN ruff rules enabled.
