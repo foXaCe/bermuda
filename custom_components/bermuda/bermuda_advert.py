@@ -15,7 +15,7 @@ to the combination of the scanner and the device it is reporting.
 from __future__ import annotations
 
 import statistics
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from bluetooth_data_tools import monotonic_time_coarse
 
@@ -64,7 +64,7 @@ class BermudaAdvert:
         self,
         parent_device: BermudaDevice,  # The device being tracked
         advertisementdata: AdvertisementData,  # The advertisement info from the device, received by the scanner
-        options,
+        options: dict[str, Any],
         scanner_device: BermudaDevice,  # The scanner device that "saw" it.
     ) -> None:
         self.scanner_address: Final[str] = scanner_device.address
@@ -106,7 +106,7 @@ class BermudaAdvert:
         # Just pass the rest on to update...
         self.update_advertisement(advertisementdata, self.scanner_device)
 
-    def apply_new_scanner(self, scanner_device: BermudaDevice):
+    def apply_new_scanner(self, scanner_device: BermudaDevice) -> None:
         self.name: str = scanner_device.name  # or scandata.scanner.name
         self.scanner_device = scanner_device  # links to the source device
         if self.scanner_address != scanner_device.address:
@@ -116,7 +116,7 @@ class BermudaAdvert:
         # Only remote scanners log timestamps, local usb adaptors do not.
         self.scanner_sends_stamps = scanner_device.is_remote_scanner
 
-    def update_advertisement(self, advertisementdata: AdvertisementData, scanner_device: BermudaDevice):
+    def update_advertisement(self, advertisementdata: AdvertisementData, scanner_device: BermudaDevice) -> None:
         """
         Update gets called every time we see a new packet or
         every time we do a polled update.
@@ -294,7 +294,7 @@ class BermudaAdvert:
 
         return self.rssi_filtered
 
-    def _update_raw_distance(self, reading_is_new=True) -> float | None:
+    def _update_raw_distance(self, *, reading_is_new: bool = True) -> float | None:
         """
         Converts rssi to raw distance and updates history stack and
         returns the new raw distance.
@@ -365,10 +365,10 @@ class BermudaAdvert:
         # its own ref_power without need.
         if value != self.ref_power:
             self.ref_power = value
-            return self._update_raw_distance(False)
+            return self._update_raw_distance(reading_is_new=False)
         return self.rssi_distance_raw
 
-    def calculate_data(self):
+    def calculate_data(self) -> None:
         """
         Filter and update distance estimates.
 
@@ -493,11 +493,11 @@ class BermudaAdvert:
         del self.hist_stamp[HIST_KEEP_COUNT:]
         del self.hist_velocity[HIST_KEEP_COUNT:]
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         """Convert class to serialisable dict for dump_devices."""
         # using "is" comparisons instead of string matching means
         # linting and typing can catch errors.
-        out = {}
+        out: dict[str, Any] = {}
         for var, val in vars(self).items():
             if val is self.options:
                 # skip certain vars that we don't want in the dump output.

@@ -51,7 +51,9 @@ class BermudaEntity(CoordinatorEntity[BermudaDataUpdateCoordinator]):
         self.bermuda_last_state: Any = 0
         self.bermuda_last_stamp: float = 0
 
-    def _cached_ratelimit(self, statevalue: Any, fast_falling=True, fast_rising=False, interval=None):
+    def _cached_ratelimit(
+        self, statevalue: Any, *, fast_falling: bool = True, fast_rising: bool = False, interval: int | None = None
+    ) -> Any:
         """
         Uses the CONF_UPDATE_INTERVAL and other logic to return either the given statevalue
         or an older, cached value. Helps to reduce excess sensor churn without compromising latency.
@@ -99,7 +101,7 @@ class BermudaEntity(CoordinatorEntity[BermudaDataUpdateCoordinator]):
         self.async_write_ha_state()
 
     @property
-    def unique_id(self):
+    def unique_id(self) -> str | None:
         """Return a unique ID to use for this entity."""
         return self._device.unique_id
 
@@ -177,7 +179,7 @@ class BermudaGlobalEntity(CoordinatorEntity[BermudaDataUpdateCoordinator]):
         """
         self.async_write_ha_state()
 
-    def _cached_ratelimit(self, statevalue: Any, interval: int | None = None):
+    def _cached_ratelimit(self, statevalue: Any, interval: int | None = None) -> Any:
         """A simple way to rate-limit sensor updates."""
         # Per-call interval without mutating the entity's default.
         effective_interval = interval if interval is not None else self._cache_ratelimit_interval

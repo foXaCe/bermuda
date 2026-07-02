@@ -19,6 +19,8 @@ from .subentry_flow import BermudaCalibrationSubentryFlow, BermudaDeviceSubentry
 _GITHUB_URL = "https://github.com/foXaCe/bermuda"
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
     from homeassistant.config_entries import ConfigFlowResult
 
@@ -50,7 +52,7 @@ class BermudaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(step_id="user", description_placeholders={"name": NAME, "github_url": _GITHUB_URL})
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """
         Handle a flow initialized by the user.
 
@@ -68,14 +70,14 @@ class BermudaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry):  # noqa: ARG004
+    def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> config_entries.OptionsFlow:  # noqa: ARG004
         return BermudaOptionsFlowHandler()
 
     @classmethod
     @callback
     def async_get_supported_subentry_types(
         cls,
-        config_entry,  # noqa: ARG003
+        config_entry: config_entries.ConfigEntry,  # noqa: ARG003
     ) -> dict[str, type[config_entries.ConfigSubentryFlow]]:
         """Per-scanner calibration and per-device enrolment are managed as config subentries."""
         return {

@@ -35,7 +35,7 @@ from .util import mac_norm
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
-    from homeassistant.core import HomeAssistant
+    from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse
     from homeassistant.helpers.device_registry import DeviceEntry
 
 type BermudaConfigEntry = ConfigEntry[BermudaData]
@@ -71,7 +71,7 @@ SERVICE_ENROL_PRIVATE_DEVICE_SCHEMA = vol.Schema(
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up Bermuda services."""
 
-    async def async_dump_devices(call):
+    async def async_dump_devices(call: ServiceCall) -> ServiceResponse:
         """Return a dump of beacon advertisements by receiver."""
         loaded_entries = [
             entry for entry in hass.config_entries.async_entries(DOMAIN) if entry.state is ConfigEntryState.LOADED
@@ -82,7 +82,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         coordinator = loaded_entries[0].runtime_data.coordinator
         return await coordinator.service_dump_devices(call)
 
-    async def async_enrol_private(call):
+    async def async_enrol_private(call: ServiceCall) -> None:
         """Create a private_ble_device entry from an IRK so Bermuda tracks it."""
         error = await async_enrol_private_device(hass, call.data[CONF_IRK], call.data.get(CONF_NAME, ""))
         if error:

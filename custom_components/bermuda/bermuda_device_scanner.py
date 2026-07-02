@@ -27,20 +27,20 @@ class BermudaScannerDeviceMixin:
     """Scanner-device behaviour, mixed into BermudaDevice."""
 
     @property
-    def is_scanner(self):
+    def is_scanner(self) -> bool:
         return self._is_scanner
 
     @property
-    def is_remote_scanner(self):
+    def is_remote_scanner(self) -> bool | None:
         return self._is_remote_scanner
 
-    def async_as_scanner_nolonger(self):
+    def async_as_scanner_nolonger(self) -> None:
         """Call when this device is unregistered as a BaseHaScanner."""
         self._is_scanner = False
         self._is_remote_scanner = False
         self._coordinator.scanner_list_del(self)
 
-    def async_as_scanner_init(self, ha_scanner: BaseHaScanner):
+    def async_as_scanner_init(self, ha_scanner: BaseHaScanner) -> None:
         """
         Configure this device as a scanner device.
 
@@ -74,7 +74,7 @@ class BermudaScannerDeviceMixin:
         if _first_init:
             self.async_as_scanner_update(ha_scanner)
 
-    def async_as_scanner_resolve_device_entries(self):
+    def async_as_scanner_resolve_device_entries(self) -> None:
         """From the known MAC address, resolve any relevant device entries and names etc."""
         # As of 2025.2.0 The bluetooth integration creates its own device entries
         # for all HaScanners, not just local adaptors. So since there are two integration
@@ -226,7 +226,7 @@ class BermudaScannerDeviceMixin:
 
         self._update_area_and_floor(_area_id)
 
-    def _update_area_and_floor(self, area_id: str | None, *, force_unknown: bool = False):
+    def _update_area_and_floor(self, area_id: str | None, *, force_unknown: bool = False) -> None:
         """
         Given an area_id, update the area and floor properties.
 
@@ -291,7 +291,7 @@ class BermudaScannerDeviceMixin:
             self.floor_name = None
             self.floor_icon = ICON_DEFAULT_FLOOR
 
-    def async_as_scanner_update(self, ha_scanner: BaseHaScanner):
+    def async_as_scanner_update(self, ha_scanner: BaseHaScanner) -> None:
         """
         Fast update of scanner details per update-cycle.
 

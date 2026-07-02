@@ -77,7 +77,7 @@ class BermudaDeviceTracker(BermudaEntity, BaseTrackerEntity):
     _attr_translation_key = "bermuda_tracker"
 
     @property
-    def unique_id(self):
+    def unique_id(self) -> str | None:
         """
         "Uniquely identify this sensor so that it gets stored in the entity_registry,
         and can be maintained / renamed etc by the user.

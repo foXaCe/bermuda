@@ -355,7 +355,7 @@ class BermudaMicrolocationMixin:
             out["scores"] = [{"name": name, "score": round(score, 2)} for (_fid, name, score) in result.scores]
         return out
 
-    def _update_options(self, **changes) -> None:
+    def _update_options(self, **changes: list[str] | dict[str, float] | float) -> None:
         """Persist option changes to the config entry (triggers a reload)."""
         new_options = dict(self.config_entry.options)
         new_options.update(changes)
