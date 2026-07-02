@@ -128,7 +128,6 @@ class BermudaDataUpdateCoordinator(
     ) -> None:
         """Initialize."""
         self.platforms = []
-        self.config_entry = entry
 
         self.sensor_interval = entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
 
@@ -160,6 +159,7 @@ class BermudaDataUpdateCoordinator(
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=entry,
             name=DOMAIN,
             update_interval=timedelta(seconds=UPDATE_INTERVAL),
             request_refresh_debouncer=Debouncer(
@@ -283,15 +283,14 @@ class BermudaDataUpdateCoordinator(
         self._microloc_init(hass, entry)
 
         # Register for newly discovered / changed BLE devices
-        if self.config_entry is not None:
-            self.config_entry.async_on_unload(
-                bluetooth.async_register_callback(
-                    self.hass,
-                    self.async_handle_advert,
-                    bluetooth.BluetoothCallbackMatcher(connectable=False),
-                    bluetooth.BluetoothScanningMode.ACTIVE,
-                )
+        self.config_entry.async_on_unload(
+            bluetooth.async_register_callback(
+                self.hass,
+                self.async_handle_advert,
+                bluetooth.BluetoothCallbackMatcher(connectable=False),
+                bluetooth.BluetoothScanningMode.ACTIVE,
             )
+        )
 
     def init_floors(self) -> bool:
         """Check if the system has floors configured, and enable sensors."""

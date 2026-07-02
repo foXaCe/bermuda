@@ -14,7 +14,7 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntryState, ConfigSubentry
 from homeassistant.const import CONF_NAME
 from homeassistant.core import SupportsResponse
-from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
@@ -114,14 +114,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: BermudaConfigEntry) -> b
     coordinator = BermudaDataUpdateCoordinator(hass, entry)
     entry.runtime_data = BermudaData(coordinator)
 
-    try:
-        await coordinator.async_refresh()
-    except Exception as err:
-        _LOGGER.exception("Error during coordinator refresh")
-        raise ConfigEntryNotReady from err
-    if not coordinator.last_update_success:
-        _LOGGER.debug("Coordinator last update failed, raising ConfigEntryNotReady")
-        raise ConfigEntryNotReady
+    await coordinator.async_config_entry_first_refresh()
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

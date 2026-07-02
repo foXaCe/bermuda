@@ -49,8 +49,10 @@ class BermudaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="single_instance_allowed")
 
         # Create a unique ID so that we don't get multiple discoveries appearing.
+        # reload_on_update=False: reloading is owned by the entry's update listener,
+        # combining both is deprecated since HA 2026.6 (error from 2026.12).
         await self.async_set_unique_id(DOMAIN)
-        self._abort_if_unique_id_configured()
+        self._abort_if_unique_id_configured(reload_on_update=False)
 
         return self.async_show_form(step_id="user", description_placeholders={"name": NAME, "github_url": _GITHUB_URL})
 
