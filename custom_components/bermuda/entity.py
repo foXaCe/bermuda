@@ -18,13 +18,13 @@ from .const import (
     DOMAIN,
     DOMAIN_PRIVATE_BLE_DEVICE,
 )
+from .coordinator import BermudaDataUpdateCoordinator
 
 if TYPE_CHECKING:
     from . import BermudaConfigEntry
-    from .coordinator import BermudaDataUpdateCoordinator
 
 
-class BermudaEntity(CoordinatorEntity):
+class BermudaEntity(CoordinatorEntity[BermudaDataUpdateCoordinator]):
     """
     Co-ordinator for Bermuda data.
 
@@ -39,7 +39,6 @@ class BermudaEntity(CoordinatorEntity):
         address: str,
     ) -> None:
         super().__init__(coordinator)
-        self.coordinator = coordinator
         self.config_entry = config_entry
         self.address = address
         self._device = coordinator.devices[address]
@@ -52,7 +51,9 @@ class BermudaEntity(CoordinatorEntity):
         self.bermuda_last_state: Any = 0
         self.bermuda_last_stamp: float = 0
 
-    def _cached_ratelimit(self, statevalue: Any, fast_falling=True, fast_rising=False, interval=None):
+    def _cached_ratelimit(
+        self, statevalue: Any, *, fast_falling: bool = True, fast_rising: bool = False, interval: int | None = None
+    ) -> Any:
         """
         Uses the CONF_UPDATE_INTERVAL and other logic to return either the given statevalue
         or an older, cached value. Helps to reduce excess sensor churn without compromising latency.
@@ -100,12 +101,12 @@ class BermudaEntity(CoordinatorEntity):
         self.async_write_ha_state()
 
     @property
-    def unique_id(self):
+    def unique_id(self) -> str | None:
         """Return a unique ID to use for this entity."""
         return self._device.unique_id
 
     @property
-    def device_info(self):
+    def device_info(self) -> dr.DeviceInfo:
         """
         Implementing this creates an entry in the device registry.
 
@@ -144,18 +145,18 @@ class BermudaEntity(CoordinatorEntity):
             connections = {(dr.CONNECTION_BLUETOOTH, self._device.address.upper())}
             # No need to set model, since MAC address will be shown via connection.
 
-        device_info = {
-            "identifiers": {(domain_name, self._device.unique_id)},
-            "connections": connections,
-            "name": self._device.name,
-        }
+        device_info = dr.DeviceInfo(
+            identifiers={(domain_name, self._device.unique_id)},
+            connections=connections,
+            name=self._device.name,
+        )
         if model is not None:
             device_info["model"] = model
 
         return device_info
 
 
-class BermudaGlobalEntity(CoordinatorEntity):
+class BermudaGlobalEntity(CoordinatorEntity[BermudaDataUpdateCoordinator]):
     """Holds all Bermuda global data under one entity type/device."""
 
     def __init__(
@@ -164,7 +165,6 @@ class BermudaGlobalEntity(CoordinatorEntity):
         config_entry: BermudaConfigEntry,
     ) -> None:
         super().__init__(coordinator)
-        self.coordinator = coordinator
         self.config_entry = config_entry
         self._cache_ratelimit_value = None
         self._cache_ratelimit_stamp: float = 0
@@ -179,7 +179,7 @@ class BermudaGlobalEntity(CoordinatorEntity):
         """
         self.async_write_ha_state()
 
-    def _cached_ratelimit(self, statevalue: Any, interval: int | None = None):
+    def _cached_ratelimit(self, statevalue: Any, interval: int | None = None) -> Any:
         """A simple way to rate-limit sensor updates."""
         # Per-call interval without mutating the entity's default.
         effective_interval = interval if interval is not None else self._cache_ratelimit_interval
@@ -193,9 +193,9 @@ class BermudaGlobalEntity(CoordinatorEntity):
             return self._cache_ratelimit_value
 
     @property
-    def device_info(self):
+    def device_info(self) -> dr.DeviceInfo:
         """Implementing this creates an entry in the device registry."""
-        return {
-            "identifiers": {(DOMAIN, "BERMUDA_GLOBAL")},
-            "name": "Bermuda Global",
-        }
+        return dr.DeviceInfo(
+            identifiers={(DOMAIN, "BERMUDA_GLOBAL")},
+            name="Bermuda Global",
+        )

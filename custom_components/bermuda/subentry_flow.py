@@ -9,6 +9,8 @@ its own add/edit/remove entry in the UI.
 
 from __future__ import annotations
 
+from typing import Any
+
 import voluptuous as vol
 from homeassistant.config_entries import ConfigSubentryFlow, SubentryFlowResult
 from homeassistant.const import CONF_NAME
@@ -49,7 +51,7 @@ def _offset_selector() -> NumberSelector:
 class BermudaCalibrationSubentryFlow(ConfigSubentryFlow):
     """Manage a single scanner's RSSI offset as a config subentry."""
 
-    async def async_step_user(self, user_input=None) -> SubentryFlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
         """Add an RSSI offset for a scanner that does not have one yet."""
         entry = self._get_entry()
         coordinator = entry.runtime_data.coordinator
@@ -87,7 +89,7 @@ class BermudaCalibrationSubentryFlow(ConfigSubentryFlow):
         )
         return self.async_show_form(step_id="user", data_schema=data_schema)
 
-    async def async_step_reconfigure(self, user_input=None) -> SubentryFlowResult:
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
         """Edit an existing scanner's RSSI offset."""
         subentry = self._get_reconfigure_subentry()
         if user_input is not None:
@@ -142,7 +144,7 @@ class BermudaDeviceSubentryFlow(ConfigSubentryFlow):
             vol.Required(CONF_DEVTRACK_TIMEOUT, default=timeout): _timeout_selector(),
         }
 
-    async def async_step_user(self, user_input=None) -> SubentryFlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
         """Enrol a discovered device that is not yet enrolled."""
         entry = self._get_entry()
         coordinator = entry.runtime_data.coordinator
@@ -185,7 +187,7 @@ class BermudaDeviceSubentryFlow(ConfigSubentryFlow):
         )
         return self.async_show_form(step_id="user", data_schema=data_schema)
 
-    async def async_step_reconfigure(self, user_input=None) -> SubentryFlowResult:
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
         """Edit an enrolled device's name, reference power and timeout."""
         subentry = self._get_reconfigure_subentry()
         if user_input is not None:

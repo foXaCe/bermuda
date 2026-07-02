@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import contextlib
 from copy import deepcopy
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 from bluetooth_data_tools import monotonic_time_coarse
@@ -73,6 +73,8 @@ from .private_enrol import async_enrol_private_device
 from .util import mac_redact
 
 if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigFlowResult
+
     from .bermuda_device import BermudaDevice
     from .coordinator import BermudaDataUpdateCoordinator
 
@@ -119,7 +121,7 @@ class BermudaOptionsFlowHandler(OptionsFlow):
                 text = text.format(**kwargs)
         return text
 
-    async def async_step_init(self, user_input=None):  # pylint: disable=unused-argument
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:  # pylint: disable=unused-argument
         """Manage the options."""
         self.coordinator = self.config_entry.runtime_data.coordinator
         self.devices = self.coordinator.devices
@@ -178,7 +180,7 @@ class BermudaOptionsFlowHandler(OptionsFlow):
             description_placeholders=messages,
         )
 
-    async def async_step_globalopts(self, user_input=None):
+    async def async_step_globalopts(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Global options, grouped into collapsible sections for readability."""
         if user_input is not None:
             # Each section nests its fields; flatten them back into the flat options.
@@ -186,13 +188,13 @@ class BermudaOptionsFlowHandler(OptionsFlow):
                 self.options.update(value)
             return await self._update_options()
 
-        def _opt(key, default):
+        def _opt(key: str, default: float) -> float:
             return self.options.get(key, default)
 
-        def _float(min_=None, max_=None):
+        def _float(min_: float | None = None, max_: float | None = None) -> vol.All:
             return vol.All(vol.Coerce(float), vol.Range(min=min_, max=max_))
 
-        def _int(min_=None):
+        def _int(min_: int | None = None) -> vol.All:
             return vol.All(vol.Coerce(int), vol.Range(min=min_))
 
         data_schema = vol.Schema(
@@ -244,7 +246,7 @@ class BermudaOptionsFlowHandler(OptionsFlow):
 
         return self.async_show_form(step_id="globalopts", data_schema=data_schema)
 
-    async def async_step_selectdevices(self, user_input=None):
+    async def async_step_selectdevices(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Choose what to track: individual devices, whole categories, and exclusions."""
         if user_input is not None:
             self.options[CONF_DEVICES] = user_input.get("devices", [])
@@ -306,7 +308,7 @@ class BermudaOptionsFlowHandler(OptionsFlow):
         )
         return self.async_show_form(step_id="selectdevices", data_schema=data_schema)
 
-    async def async_step_enrol_private(self, user_input=None):
+    async def async_step_enrol_private(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """
         Enrol a privacy device (iPhone/Watch) by its IRK.
 
@@ -331,7 +333,7 @@ class BermudaOptionsFlowHandler(OptionsFlow):
         )
         return self.async_show_form(step_id="enrol_private", data_schema=data_schema, errors=errors)
 
-    async def async_step_area_entities(self, user_input=None):
+    async def async_step_area_entities(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Select presence entities and the global default virtual distance."""
         if user_input is not None:
             self.options[CONF_AREA_ENTITIES] = user_input.get(CONF_AREA_ENTITIES, [])
@@ -356,7 +358,7 @@ class BermudaOptionsFlowHandler(OptionsFlow):
         }
         return self.async_show_form(step_id="area_entities", data_schema=vol.Schema(data_schema))
 
-    async def async_step_area_entities_distance(self, user_input=None):
+    async def async_step_area_entities_distance(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Set the per-entity virtual distance, grouped by area for readability."""
         entities = self.options.get(CONF_AREA_ENTITIES, [])
         if user_input is not None:
@@ -399,6 +401,6 @@ class BermudaOptionsFlowHandler(OptionsFlow):
             description_placeholders={"area_summary": summary},
         )
 
-    async def _update_options(self):
+    async def _update_options(self) -> ConfigFlowResult:
         """Update config entry options."""
         return self.async_create_entry(title=NAME, data=self.options)

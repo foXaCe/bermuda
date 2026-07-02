@@ -198,7 +198,7 @@ class BermudaDevice(BermudaScannerDeviceMixin):
         ] = {}  # str will be a scanner address OR a deviceaddress__scanneraddress
         self._async_process_address_type()
 
-    def _async_process_address_type(self):
+    def _async_process_address_type(self) -> None:
         """
         Identify the address type (MAC, IRK, iBeacon etc) and perform any setup.
 
@@ -299,7 +299,7 @@ class BermudaDevice(BermudaScannerDeviceMixin):
             # be fine because our irk_manager will only fire another callback if the mac is new.
             self._coordinator.irk_manager.add_macirk(address, bytes.fromhex(self.address))
 
-    def make_name(self):
+    def make_name(self) -> str:
         """
         Refreshes self.name, sets and returns it, based on naming preferences.
 
@@ -328,7 +328,7 @@ class BermudaDevice(BermudaScannerDeviceMixin):
 
         return self.name
 
-    def set_ref_power(self, new_ref_power: float):
+    def set_ref_power(self, new_ref_power: float) -> None:
         """
         Set a new reference power for this device and immediately apply
         an interim distance calculation.
@@ -393,7 +393,7 @@ class BermudaDevice(BermudaScannerDeviceMixin):
             return CATEGORY_RANDOM
         return CATEGORY_PUBLIC
 
-    def apply_scanner_selection(self, bermuda_advert: BermudaAdvert | None, *, force_unknown: bool = False):
+    def apply_scanner_selection(self, bermuda_advert: BermudaAdvert | None, *, force_unknown: bool = False) -> None:
         """
         Given a BermudaAdvert entry, apply the distance and area attributes
         from it to this device.
@@ -439,7 +439,7 @@ class BermudaDevice(BermudaScannerDeviceMixin):
         self.area_rssi = 0
         self.area_advert = None
 
-    def get_scanner(self, scanner_address) -> BermudaAdvert | None:
+    def get_scanner(self, scanner_address: str) -> BermudaAdvert | None:
         """
         Given a scanner address, return the most recent BermudaDeviceScanner (advert) that matches.
 
@@ -460,7 +460,7 @@ class BermudaDevice(BermudaScannerDeviceMixin):
 
         return _found_scanner
 
-    def calculate_data(self):
+    def calculate_data(self) -> None:
         """
         Call after doing update_scanner() calls so that distances
         etc can be freshly smoothed and filtered.
@@ -498,7 +498,7 @@ class BermudaDevice(BermudaScannerDeviceMixin):
             # (track_categories), and not on the exclusion denylist. Flag for set-up.
             self.create_sensor = True
 
-    def process_advertisement(self, scanner_device: BermudaDevice, advertisementdata: AdvertisementData):
+    def process_advertisement(self, scanner_device: BermudaDevice, advertisementdata: AdvertisementData) -> None:
         """
         Add/Update a scanner/advert entry pair on this device, indicating a received advertisement.
 
@@ -541,7 +541,7 @@ class BermudaDevice(BermudaScannerDeviceMixin):
         if device_advert.stamp is not None and self.last_seen < device_advert.stamp:
             self.last_seen = device_advert.stamp
 
-    def process_manufacturer_data(self, advert: BermudaAdvert):
+    def process_manufacturer_data(self, advert: BermudaAdvert) -> None:
         """Parse manufacturer data for maker name and iBeacon etc."""
         # Only override existing manufacturer name if it's "better"
 
@@ -653,9 +653,9 @@ class BermudaDevice(BermudaScannerDeviceMixin):
         if applied_fallback_name:
             self.make_name()
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         """Convert class to serialisable dict for dump_devices."""
-        out = {}
+        out: dict[str, Any] = {}
         for var, val in vars(self).items():
             if val is None:
                 # Catch the Nones first, as otherwise they might match some other objects below if

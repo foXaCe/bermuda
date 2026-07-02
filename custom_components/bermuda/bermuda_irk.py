@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from math import floor
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from bleak.backends.device import BLEDevice
 from bluetooth_data_tools import get_cipher_for_irk, monotonic_time_coarse, resolve_private_address
@@ -63,7 +63,7 @@ class BermudaIrkManager:
             _LOGGER.debug("New IRK %s... matches %d of %d existing MACs", irk.hex()[:4], len(macs), len(self._macs))
         return macs
 
-    def known_macs(self, resolved=True) -> dict[str, ResolvableMAC]:
+    def known_macs(self, *, resolved: bool = True) -> dict[str, ResolvableMAC]:
         """
         Returns a list of ResolvableMAC tuples.
 
@@ -75,7 +75,7 @@ class BermudaIrkManager:
         # otherwise, all of 'em
         return self._macs.copy()
 
-    def async_prune(self):
+    def async_prune(self) -> None:
         """
         Check for expired MACs and expunge them.
 
@@ -178,7 +178,7 @@ class BermudaIrkManager:
             self._macs[address] = ResolvableMAC(address, macirk.expires, irk)
         return irk
 
-    def fire_callbacks(self, irk, mac) -> None:
+    def fire_callbacks(self, irk: bytes, mac: str) -> None:
         """
         Fire all callbacks for the given irk advising it of the MAC.
 
@@ -230,7 +230,7 @@ class BermudaIrkManager:
 
         return _unsubscribe
 
-    def async_diagnostics_no_redactions(self):
+    def async_diagnostics_no_redactions(self) -> dict[str, Any]:
         """
         Return diagnostic info (MAC addresses still need washing by redact_data).
 

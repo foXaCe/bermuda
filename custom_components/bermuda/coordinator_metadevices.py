@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 class BermudaMetadeviceMixin:
     """Metadevice discovery and per-cycle update, mixed into the coordinator."""
 
-    def discover_private_ble_metadevices(self):
+    def discover_private_ble_metadevices(self) -> None:
         """
         Access the Private BLE Device integration to find metadevices to track.
 
@@ -118,7 +118,7 @@ class BermudaMetadeviceMixin:
                                 pb_entity.entity_id,
                             )
 
-    def register_ibeacon_source(self, source_device: BermudaDevice):
+    def register_ibeacon_source(self, source_device: BermudaDevice) -> None:
         """
         Create or update the meta-device for tracking an iBeacon.
 
@@ -173,7 +173,7 @@ class BermudaMetadeviceMixin:
             metadevice.name_bt_serviceinfo = metadevice.name_bt_serviceinfo or source_device.name_bt_serviceinfo
             metadevice.name_bt_local_name = metadevice.name_bt_local_name or source_device.name_bt_local_name
 
-    def update_metadevices(self):
+    def update_metadevices(self) -> None:
         """
         Create or update iBeacon, Private_BLE and other meta-devices from
         the received advertisements.
