@@ -325,12 +325,7 @@ class BermudaScannerDeviceMixin:
         if self.is_remote_scanner:
             # Set typing ignore to avoid cost of an if isinstance, since is_remote_scanner already implies
             # that ha_scanner is a BaseHaRemoteScanner.
-            # New API in 2025.4.0
-            if self._coordinator.hass_version_min_2025_4:
-                self.stamps = self._hascanner.discovered_device_timestamps  # type: ignore
-            else:
-                # pylint: disable=W0212,C0301
-                self.stamps = self._hascanner._discovered_device_timestamps  # type: ignore # noqa: SLF001
+            self.stamps = self._hascanner.discovered_device_timestamps  # type: ignore
 
     def async_as_scanner_get_stamp(self, address: str) -> float | None:
         """

@@ -11,8 +11,6 @@ from typing import TYPE_CHECKING, Any, cast
 
 from bluetooth_data_tools import monotonic_time_coarse
 from homeassistant.components import bluetooth
-from homeassistant.const import MAJOR_VERSION as HA_VERSION_MAJ
-from homeassistant.const import MINOR_VERSION as HA_VERSION_MIN
 from homeassistant.core import (
     Event,
     HomeAssistant,
@@ -130,10 +128,6 @@ class BermudaDataUpdateCoordinator(
         self.platforms = []
 
         self.sensor_interval = entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
-
-        # set some version flags
-        # when habasescanner.discovered_device_timestamps became a public method.
-        self.hass_version_min_2025_4 = HA_VERSION_MAJ > 2025 or (HA_VERSION_MAJ == 2025 and HA_VERSION_MIN >= 4)
 
         # ##### Redaction Data ###
         #

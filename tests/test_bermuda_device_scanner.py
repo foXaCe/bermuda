@@ -23,7 +23,6 @@ def make_coordinator():
     """A MagicMock coordinator usable by BermudaDevice.__init__ (see test_bermuda_device_extra.py)."""
     coordinator = MagicMock()
     coordinator.options = {}
-    coordinator.hass_version_min_2025_4 = True
     coordinator.irk_manager = MagicMock()
     coordinator.get_manufacturer_from_id.return_value = (None, None)
     return coordinator
@@ -245,11 +244,10 @@ def test_get_stamp_non_remote_scanner_returns_none(mock_coordinator):
 
 
 # --------------------------------------------------------------------------- #
-# async_as_scanner_update: remote-scanner stamps copy (2025.4+ vs legacy attr)
+# async_as_scanner_update: remote-scanner stamps copy
 # --------------------------------------------------------------------------- #
-def test_async_as_scanner_update_remote_scanner_copies_stamps_new_api(mock_coordinator):
-    """A remote scanner on HA >= 2025.4 copies discovered_device_timestamps directly."""
-    mock_coordinator.hass_version_min_2025_4 = True
+def test_async_as_scanner_update_remote_scanner_copies_stamps(mock_coordinator):
+    """A remote scanner copies discovered_device_timestamps directly."""
     dev = BermudaDevice(address="aa:bb:cc:dd:ee:ff", coordinator=mock_coordinator)
     ha_scanner = _fake_ha_scanner("aa:bb:cc:dd:ee:ff", remote=True)
     ha_scanner.discovered_device_timestamps = {"11:22:33:44:55:66": 42.0}
@@ -258,16 +256,3 @@ def test_async_as_scanner_update_remote_scanner_copies_stamps_new_api(mock_coord
 
     assert dev.is_remote_scanner is True
     assert dev.stamps == {"11:22:33:44:55:66": 42.0}
-
-
-def test_async_as_scanner_update_remote_scanner_copies_stamps_legacy_api(mock_coordinator):
-    """A remote scanner on HA < 2025.4 falls back to the private _discovered_device_timestamps."""
-    mock_coordinator.hass_version_min_2025_4 = False
-    dev = BermudaDevice(address="aa:bb:cc:dd:ee:ff", coordinator=mock_coordinator)
-    ha_scanner = _fake_ha_scanner("aa:bb:cc:dd:ee:ff", remote=True)
-    ha_scanner._discovered_device_timestamps = {"77:88:99:aa:bb:cc": 7.0}
-
-    dev.async_as_scanner_init(ha_scanner)
-
-    assert dev.is_remote_scanner is True
-    assert dev.stamps == {"77:88:99:aa:bb:cc": 7.0}

@@ -49,7 +49,6 @@ def make_coordinator():
     """
     coordinator = MagicMock()
     coordinator.options = {}
-    coordinator.hass_version_min_2025_4 = True
     coordinator.irk_manager = MagicMock()
     coordinator.get_manufacturer_from_id.return_value = (None, None)
     return coordinator
