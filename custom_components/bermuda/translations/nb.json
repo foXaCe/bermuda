@@ -141,6 +141,9 @@
       "micro_location": {
         "name": "Mikroplassering"
       },
+      "nearby_devices": {
+        "name": "Enheter i nærheten"
+      },
       "nearest_rssi": {
         "name": "Nærmeste RSSI"
       },

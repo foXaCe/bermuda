@@ -141,6 +141,9 @@
       "micro_location": {
         "name": "Micro-localização"
       },
+      "nearby_devices": {
+        "name": "Dispositivos próximos"
+      },
       "nearest_rssi": {
         "name": "RSSI mais próximo"
       },

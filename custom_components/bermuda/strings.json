@@ -61,6 +61,9 @@
       "visible_device_count": {
         "name": "Visible device count"
       },
+      "nearby_devices": {
+        "name": "Nearby devices"
+      },
       "micro_location": {
         "name": "Micro-location"
       },

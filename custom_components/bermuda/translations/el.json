@@ -141,6 +141,9 @@
       "micro_location": {
         "name": "Μικρο-τοποθεσία"
       },
+      "nearby_devices": {
+        "name": "Κοντινές συσκευές"
+      },
       "nearest_rssi": {
         "name": "Πλησιέστερο RSSI"
       },
