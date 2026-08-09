@@ -117,7 +117,7 @@ async def test_dump_devices_service_raises_when_not_loaded(hass: HomeAssistant, 
 
 async def test_enrol_private_service_success(hass: HomeAssistant, setup_bermuda_entry: MockConfigEntry):
     """A successful enrolment (empty error string) does not raise."""
-    with patch("custom_components.bermuda.async_enrol_private_device", return_value=""):
+    with patch("custom_components.bermuda.private_enrol.async_enrol_private_device", return_value=""):
         await hass.services.async_call(
             DOMAIN,
             SERVICE_ENROL_PRIVATE_DEVICE,
@@ -129,7 +129,7 @@ async def test_enrol_private_service_success(hass: HomeAssistant, setup_bermuda_
 async def test_enrol_private_service_error_raises(hass: HomeAssistant, setup_bermuda_entry: MockConfigEntry):
     """A non-empty error string from async_enrol_private_device raises ServiceValidationError."""
     with (
-        patch("custom_components.bermuda.async_enrol_private_device", return_value="irk_not_valid"),
+        patch("custom_components.bermuda.private_enrol.async_enrol_private_device", return_value="irk_not_valid"),
         pytest.raises(ServiceValidationError),
     ):
         await hass.services.async_call(

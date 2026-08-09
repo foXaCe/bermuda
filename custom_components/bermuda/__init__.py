@@ -30,8 +30,6 @@ from .const import (
     SUBENTRY_TYPE_CALIBRATION,
 )
 from .coordinator import BermudaDataUpdateCoordinator
-from .intents import async_register_intents
-from .private_enrol import async_enrol_private_device
 from .util import mac_norm
 
 if TYPE_CHECKING:
@@ -87,6 +85,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     async def async_enrol_private(call: ServiceCall) -> None:
         """Create a private_ble_device entry from an IRK so Bermuda tracks it."""
+        from .private_enrol import async_enrol_private_device  # noqa: PLC0415
+
         error = await async_enrol_private_device(hass, call.data[CONF_IRK], call.data.get(CONF_NAME, ""))
         if error:
             raise ServiceValidationError(translation_domain=DOMAIN, translation_key=error)
@@ -125,6 +125,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: BermudaConfigEntry) -> b
 
     # Register voice/Assist intents so micro-locations are reachable from MCP
     # clients and the conversation agent, not just via services.
+    from .intents import async_register_intents  # noqa: PLC0415
+
     async_register_intents(hass)
 
     return True

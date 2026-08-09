@@ -20,6 +20,7 @@ from .const import (
     _LOGGER,
     BDADDR_TYPE_NOT_MAC48,
     BDADDR_TYPE_RANDOM_RESOLVABLE,
+    CONF_DEVICES,
     PRUNE_MAX_COUNT,
     PRUNE_TIME_DEFAULT,
     PRUNE_TIME_INTERVAL,
@@ -33,6 +34,11 @@ if TYPE_CHECKING:
 # BlueZ doesn't give us timestamps; we guess them from rssi changes, so we keep
 # devices seen within the BlueZ cache window even when over quota.
 _BLUEZ_CACHE_SECONDS = 200
+
+
+def _configured_devices(coordinator: BermudaDataUpdateCoordinator) -> set[str]:
+    """Return the set of user-configured device addresses (upper-cased)."""
+    return {addr.upper() for addr in getattr(coordinator, "options", {}).get(CONF_DEVICES, [])}
 
 
 def prune_devices(coordinator: BermudaDataUpdateCoordinator, *, force_pruning: bool = False) -> None:
@@ -88,12 +94,16 @@ def prune_devices(coordinator: BermudaDataUpdateCoordinator, *, force_pruning: b
                         prune_list.add(address)
 
     for device_address, device in co.devices.items():
-        # Prunable if it is not a scanner, not a metadevice, not configured-tracked,
-        # not a private_ble device, and a real MAC. A stale untracked iBeacon goes.
+        # Never drop a device the user explicitly configured to track (it may
+        # not have been seen on the air yet, but it must stay to claim its
+        # restored sensors at startup). Also prunable if it is not a scanner,
+        # not a metadevice, not a private_ble device, and a real MAC. A stale
+        # untracked iBeacon goes.
         if (
             device_address not in metadevice_source_keepers
             and device_address not in co.metadevices
             and device_address not in co.scanner_list
+            and device_address.upper() not in _configured_devices(co)
             and (not device.create_sensor)
             and (not device.is_scanner)
             and device.address_type != BDADDR_TYPE_NOT_MAC48
