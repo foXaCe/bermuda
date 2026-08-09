@@ -48,14 +48,15 @@ jobs:
           done
 
       - name: Audit requirements files
-        # PyJWT and Pillow are pinned exactly by homeassistant core, so their
-        # vulns cannot be fixed here — and new CVE/GHSA aliases for the same
-        # flaws keep being published, which breaks any ID-based ignore list.
-        # Exclude those two packages by NAME until HA bumps them (they are
-        # dev/test-env-only deps: Bermuda itself has no runtime requirements).
-        # Any vulnerability in any other package still fails the job.
+        # PyJWT, Pillow and cryptography are pinned exactly by homeassistant
+        # core, so their vulns cannot be fixed here — and new CVE/GHSA aliases
+        # for the same flaws keep being published, which breaks any ID-based
+        # ignore list. Exclude those three packages by NAME until HA bumps them
+        # (they are dev/test-env-only deps: Bermuda itself has no runtime
+        # requirements). Any vulnerability in any other package still fails
+        # the job.
         run: |
-          HA_PINNED='["pillow", "pyjwt"]'
+          HA_PINNED='["pillow", "pyjwt", "cryptography"]'
           FAILED=0
           for r in requirements.txt requirements_test.txt requirements_dev.txt; do
             [ -f "$r" ] || continue
@@ -73,7 +74,7 @@ jobs:
               /tmp/audit.json)
             if [ "$(echo "$REAL" | jq 'length')" -gt 0 ]; then
               echo "$REAL" | jq .
-              echo "::error::pip-audit found vulnerabilities in $r (outside HA-pinned pillow/pyjwt)"
+              echo "::error::pip-audit found vulnerabilities in $r (outside HA-pinned pillow/pyjwt/cryptography)"
               FAILED=1
             fi
             echo "::endgroup::"
