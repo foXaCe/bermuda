@@ -3,7 +3,7 @@
 
 # Home Assistant itself, for the dev/test host.
 homeassistant>=2026.6.4
-pip>=26.1.2,<26.2
+pip>=26.2.1,<26.3
 
 # Pulled in by HA components that the bluetooth/usb/esphome test fixtures load
 # during the pytest suite - not used by Bermuda's own code.
