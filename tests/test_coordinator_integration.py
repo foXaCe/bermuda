@@ -305,12 +305,22 @@ async def test_update_cycle_logs_error_when_very_slow(
     process-wide ``time`` module) so asyncio's own clock -- used internally on
     every loop iteration -- is unaffected; patching ``time.monotonic`` globally
     starves the event loop's scheduler and corrupts unrelated background tasks.
+
+    The cycle now reads ``time.monotonic()`` once per phase (for the timing
+    breakdown), so a fixed two-value side_effect is no longer enough: the fake
+    returns 0.0 for the very first read (cycle_start) and 3.0 for every later
+    read, giving an elapsed ~3s regardless of how many phases run.
     """
     coordinator = _get_coordinator(setup_bermuda_entry)
     coordinator._waitingfor_load_manufacturer_ids = False
     coordinator.update_in_progress = False
 
-    fake_time = SimpleNamespace(monotonic=MagicMock(side_effect=[0.0, 3.0]))
+    def _mono() -> float:
+        _mono.count += 1
+        return 0.0 if _mono.count == 1 else 3.0
+
+    _mono.count = 0
+    fake_time = SimpleNamespace(monotonic=_mono)
     with (
         patch("custom_components.bermuda.coordinator.time", fake_time),
         caplog.at_level(logging.ERROR, logger="custom_components.bermuda"),
@@ -318,6 +328,7 @@ async def test_update_cycle_logs_error_when_very_slow(
         await coordinator._async_update_data_internal()
 
     assert "Update cycle took" in caplog.text
+    assert "phases:" in caplog.text
 
 
 async def test_update_cycle_logs_warning_when_moderately_slow(
@@ -332,7 +343,12 @@ async def test_update_cycle_logs_warning_when_moderately_slow(
     coordinator._waitingfor_load_manufacturer_ids = False
     coordinator.update_in_progress = False
 
-    fake_time = SimpleNamespace(monotonic=MagicMock(side_effect=[0.0, 1.0]))
+    def _mono() -> float:
+        _mono.count += 1
+        return 0.0 if _mono.count == 1 else 1.0
+
+    _mono.count = 0
+    fake_time = SimpleNamespace(monotonic=_mono)
     with (
         patch("custom_components.bermuda.coordinator.time", fake_time),
         caplog.at_level(logging.WARNING, logger="custom_components.bermuda"),

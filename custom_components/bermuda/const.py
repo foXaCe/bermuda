@@ -173,12 +173,26 @@ class IrkTypes(Enum):
 # According to the backend comments, BlueZ times out adverts at 180 seconds, and HA
 # expires adverts at 195 seconds to avoid churning.
 #
-PRUNE_MAX_COUNT = 1000  # How many device entries to allow at maximum
+PRUNE_MAX_COUNT = 500  # How many device entries to allow at maximum
 PRUNE_TIME_INTERVAL = 180  # Every 3m, prune stale devices
 # ### Note about timeouts: Bluez and HABT cache for 180 or 195 seconds. Setting
 # timeouts below that may result in prune/create/prune churn, but as long as
 # we only re-create *fresh* devices the risk is low.
-PRUNE_TIME_DEFAULT = 86400  # Max age of regular device entries (1day)
+#
+# FIX ME (fork deviation, survive rebase): PRUNE_TIME_DEFAULT was 86400 (24h).
+# A static MAC that is never tracked and never becomes a metadevice source is pure
+# noise: nothing reads its adverts once it is stale, so keeping it for a day only
+# grows the per-cycle O(len(devices)) passes and memory. On a domestic instance the
+# proxies pick up hundreds of such one-off MACs a day (neighbours' phones, cars...),
+# which is exactly what filled the list that made update cycles blow past
+# CYCLE_TIME_WARN. 7200s (2h) keeps the pool ~12x smaller while staying safely above
+# the 180-195s BlueZ/HABT cache window (no prune/create churn for actively-reporting
+# devices), matches PICKER_STALE_AGE so freshly-pruned devices are still selectable
+# in the options flow, and cannot hurt trilateration: configured devices, scanners,
+# metadevices and metadevice sources are all protected by dedicated keepers below.
+# IRK/Private-BLE churn is unaffected - resolvable addresses use their own timeouts
+# (PRUNE_TIME_UNKNOWN_IRK / PRUNE_TIME_KNOWN_IRK).
+PRUNE_TIME_DEFAULT = 7200  # Max age of regular device entries (2h, was 24h)
 PRUNE_TIME_UNKNOWN_IRK = 240  # Resolvable Private addresses change often, prune regularly.
 # see Bluetooth Core Spec, Vol3, Part C, Appendix A, Table A.1: Defined GAP timers
 PRUNE_TIME_KNOWN_IRK: Final[int] = 16 * 60  # spec "recommends" 15 min max address age. Round up to 16 :-)
