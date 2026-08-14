@@ -98,6 +98,11 @@ if TYPE_CHECKING:
 Cancellable = Callable[[], None]
 
 
+def _fmt_phase_times(phase_times: dict[str, float]) -> str:
+    """Render the per-phase cycle timing breakdown for a log line."""
+    return ", ".join(f"{name}={val:.2f}s" for name, val in phase_times.items())
+
+
 class BermudaDataUpdateCoordinator(
     BermudaScannerMixin, BermudaMetadeviceMixin, BermudaMicrolocationMixin, DataUpdateCoordinator[None]
 ):
@@ -140,6 +145,12 @@ class BermudaDataUpdateCoordinator(
         self.stamp_last_update: float = 0  # Last time we ran an update, from monotonic_time_coarse()
         self.stamp_last_update_started: float = 0
         self.stamp_last_prune: float = 0  # When we last pruned device list
+
+        # Devices that received an advert this cycle (used to skip per-device
+        # processing for dormant, untracked noise; see _async_update_data_internal).
+        self._seen_this_cycle: set[str] = set()
+        # Per-phase timing of the last update cycle, for diagnostics/debug.
+        self.cycle_stats: dict[str, object] = {"elapsed": 0.0, "devices": 0, "phases": {}}
 
         self.member_uuids: dict[int, str] = {}
         self.company_uuids: dict[int, str] = {}
@@ -563,39 +574,78 @@ class BermudaDataUpdateCoordinator(
 
         cycle_start = time.monotonic()
         nowstamp = monotonic_time_coarse()
+        phase_times: dict[str, float] = {}
+        last_phase = cycle_start
+
+        def _mark(phase: str) -> None:
+            """Record the elapsed time of the phase that just finished."""
+            nonlocal last_phase
+            phase_times[phase] = time.monotonic() - last_phase
+            last_phase = time.monotonic()
 
         try:  # so we can still clean up update_in_progress
             # Phase 1: Gather adverts from the backend
             self._async_gather_advert_data()
             await asyncio.sleep(0)
+            _mark("gather")
 
             # Phase 2: Update metadevices
             self.update_metadevices()
             await asyncio.sleep(0)
+            _mark("metadevices")
 
             # Phase 3: Calculate per-device data
             #
             # Scanner entries have been loaded up with latest data, now we can
             # process data for all devices over all scanners.
+            #
+            # Only devices that are actually *relevant* this cycle get their
+            # calculate_data() run: anything seen this cycle, plus tracked
+            # devices (create_sensor), scanners, metadevices, their source
+            # devices, and configured-but-unseen devices (so their create_sensor
+            # can be set and their restored sensors claimed). Everything else is
+            # dormant untracked noise whose adverts are already in a stable
+            # state and are read by nobody; running the smoothing over them on
+            # every ~1s cycle is what let a large discovered-device population
+            # push cycle time past CYCLE_TIME_WARN.
+            configured = {mac_norm(addr) for addr in self.options.get(CONF_DEVICES, [])}
+            metadevice_source_addresses: set[str] = set()
+            for metadevice in self.metadevices.values():
+                metadevice_source_addresses.update(metadevice.metadevice_sources)
+
+            processed_devices: list[BermudaDevice] = []
             for _device_count, device in enumerate(self.devices.values()):
                 # Recalculate smoothed distances, last_seen etc
-                device.calculate_data()
+                if (
+                    device.address in self._seen_this_cycle
+                    or device.create_sensor
+                    or device.is_scanner
+                    or device.address in self.metadevices
+                    or device.address in metadevice_source_addresses
+                    or device.address in configured
+                ):
+                    device.calculate_data()
+                    processed_devices.append(device)
                 if _device_count % 20 == 0:
                     await asyncio.sleep(0)
 
             await asyncio.sleep(0)
+            _mark("per_device")
 
             # Phase 4: Area refresh
             self._refresh_areas_by_min_distance()
+            _mark("area_refresh")
 
             # Phase 4a: presence-entity overrides — a triggered HA entity (motion,
             # contact, ...) can win the device's area over BLE at a virtual distance.
             self._apply_area_entity_overrides()
+            _mark("area_overrides")
 
             # Phase 4b: refine to a named "micro-location" (eg Key hook) where a
             # saved fingerprint matches. Purely additive — never alters the Area.
             self._refresh_microlocations()
             await asyncio.sleep(0)
+            _mark("microlocations")
 
             # If any *configured* devices have not yet been seen, create device
             # entries for them so they will claim the restored sensors in HA
@@ -607,29 +657,39 @@ class BermudaDataUpdateCoordinator(
             # re-runs every cycle (cost is low); sort it out when moving to
             # device-based restoration (ie using DR/ER to decide what devices
             # to track and deprecating CONF_DEVICES).
-            for _source_address in self.options.get(CONF_DEVICES, []):
-                self._get_or_create_device(_source_address)
+            #
+            # It only has to do work when a configured device is missing from
+            # the dict, so skip the loop entirely in the common case.
+            if any(mac_norm(addr) not in self.devices for addr in self.options.get(CONF_DEVICES, [])):
+                for _source_address in self.options.get(CONF_DEVICES, []):
+                    self._get_or_create_device(_source_address)
+            _mark("configured_seed")
 
             # Trigger creation of any new entities
             #
             # The devices are all updated now (and any new scanners and beacons seen have been added),
             # so let's ensure any devices that we create sensors for are set up ready to go.
-            for address, device in self.devices.items():
+            # Only the devices processed in Phase 3 above can need an entity:
+            # every device with create_sensor=True is processed there, so a scan
+            # of the full device dict is redundant.
+            for device in processed_devices:
                 if device.create_sensor:
                     if not device.create_all_done:
-                        _LOGGER.debug("Firing device_new for %s (%s)", device.name, address)
+                        _LOGGER.debug("Firing device_new for %s (%s)", device.name, device.address)
                         # Note that the below should be OK thread-wise, debugger indicates this is being
                         # called by _run in events.py, so pretty sure we are "in the event loop".
-                        async_dispatcher_send(self.hass, SIGNAL_DEVICE_NEW, address)
+                        async_dispatcher_send(self.hass, SIGNAL_DEVICE_NEW, device.address)
                     # Spin up IN100 telemetry sensors only once a device actually broadcasts
                     # 0x0505 (may be long after its base sensors — fires until the platform
                     # reports back via in100_sensors_created).
                     if device.in100_detected and not device.create_in100_done:
-                        async_dispatcher_send(self.hass, SIGNAL_DEVICE_IN100_NEW, address)
+                        async_dispatcher_send(self.hass, SIGNAL_DEVICE_IN100_NEW, device.address)
+            _mark("entity_creation")
 
             # Phase 5: Device Pruning (only runs periodically)
             self.prune_devices()
             await asyncio.sleep(0)
+            _mark("prune")
 
             self.last_update_success = True
         except Exception:
@@ -640,31 +700,54 @@ class BermudaDataUpdateCoordinator(
         finally:
             # end of async update
             self.update_in_progress = False
+            # Reset the per-cycle seen-set so the next cycle starts fresh (also
+            # on failure, so a partially-populated set can't leak into later
+            # cycles).
+            self._seen_this_cycle.clear()
             # Advance the bookkeeping stamps even on failure, so a broken cycle
             # does not make every incoming advert spawn a fresh background update,
             # and the "skip already-processed adverts" optimisation keeps working.
             self.stamp_last_update_started = nowstamp
             self.stamp_last_update = monotonic_time_coarse()
 
-        # Monitor cycle duration
+        # Monitor cycle duration and keep the phase breakdown for diagnostics.
         cycle_elapsed = time.monotonic() - cycle_start
+        self.cycle_stats = {
+            "elapsed": round(cycle_elapsed, 4),
+            "devices": len(self.devices),
+            "phases": {name: round(val, 4) for name, val in phase_times.items()},
+        }
         if cycle_elapsed > CYCLE_TIME_ERROR:
             _LOGGER.error(
-                "Update cycle took %.2fs (devices: %d) — event loop may have been starved",
+                "Update cycle took %.2fs (devices: %d) — phases: %s",
                 cycle_elapsed,
                 len(self.devices),
+                _fmt_phase_times(phase_times),
             )
         elif cycle_elapsed > CYCLE_TIME_WARN:
             _LOGGER.warning(
-                "Update cycle took %.2fs (devices: %d)",
+                "Update cycle took %.2fs (devices: %d) — phases: %s",
                 cycle_elapsed,
                 len(self.devices),
+                _fmt_phase_times(phase_times),
+            )
+        else:
+            _LOGGER.debug(
+                "Update cycle took %.2fs (devices: %d) — phases: %s",
+                cycle_elapsed,
+                len(self.devices),
+                _fmt_phase_times(phase_times),
             )
 
         return True
 
     def _async_gather_advert_data(self) -> None:
         """Perform the gathering of backend Bluetooth Data and updating scanners and devices."""
+        # Defensive: bare coordinators (and any path that never ran __init__)
+        # may not have the per-cycle seen-set yet; lazily create it.
+        if not hasattr(self, "_seen_this_cycle"):
+            self._seen_this_cycle = set()
+
         # Initialise ha_scanners if we haven't already
         if self._scanner_init_pending:
             self._refresh_scanners(force=True)
@@ -703,6 +786,10 @@ class BermudaDataUpdateCoordinator(
                     continue
 
                 device = self._get_or_create_device(bledevice.address)
+                # Record the sighting so Phase 3 knows this device has fresh
+                # data and must be reprocessed this cycle (everything else that
+                # is dormant untracked noise is skipped there).
+                self._seen_this_cycle.add(device.address)
                 device.process_advertisement(scanner_device, advertisementdata)
 
         # end of for ha_scanner loop
