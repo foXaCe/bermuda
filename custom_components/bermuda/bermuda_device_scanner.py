@@ -170,8 +170,7 @@ class BermudaScannerDeviceMixin:
                 connlist.add(("mac", altmac))
                 maclist.add(altmac)
 
-        # Requires 2025.3
-        devreg_devices = self._coordinator.dr.devices.get_entries(None, connections=connlist)
+        devreg_devices = self._coordinator.dr.async_get_devices(connections=connlist)
         devreg_count = 0  # can't len() an iterable.
         devreg_stringlist = ""  # for debug logging
         for devreg_device in devreg_devices:

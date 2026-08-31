@@ -394,14 +394,14 @@ def test_resolve_device_entries_no_hascanner_warns_and_returns(mock_coordinator)
     dev._hascanner = None
     # Should not raise even though coordinator.dr is never consulted.
     dev.async_as_scanner_resolve_device_entries()
-    mock_coordinator.dr.devices.get_entries.assert_not_called()
+    mock_coordinator.dr.async_get_devices.assert_not_called()
 
 
 def test_resolve_device_entries_not_found_logs_error(mock_coordinator):
     """When no devreg device is found the method bails after logging an error."""
     dev = BermudaDevice(address="aa:bb:cc:dd:ee:ff", coordinator=mock_coordinator)
     dev._hascanner = SimpleNamespace(source="aa:bb:cc:dd:ee:ff", name="ScannerName")
-    mock_coordinator.dr.devices.get_entries.return_value = []
+    mock_coordinator.dr.async_get_devices.return_value = []
     # name_devreg should remain untouched (None) because we return early.
     dev.async_as_scanner_resolve_device_entries()
     assert dev.name_devreg is None
@@ -426,7 +426,7 @@ def test_resolve_device_entries_bt_and_mac_match(mock_coordinator):
         name_by_user=None,
         connections={("mac", "aa:bb:cc:dd:ee:fd")},
     )
-    mock_coordinator.dr.devices.get_entries.return_value = [bt_entry, mac_entry]
+    mock_coordinator.dr.async_get_devices.return_value = [bt_entry, mac_entry]
 
     # Real area registry stub returning a usable area.
     area = SimpleNamespace(name="Lounge", icon="mdi:sofa", floor_id=None)

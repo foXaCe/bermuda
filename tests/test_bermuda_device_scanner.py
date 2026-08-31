@@ -70,10 +70,10 @@ def test_async_as_scanner_init_same_object_is_noop(mock_coordinator):
     ha_scanner = _fake_ha_scanner("aa:bb:cc:dd:ee:ff")
 
     dev.async_as_scanner_init(ha_scanner)
-    assert mock_coordinator.dr.devices.get_entries.call_count == 1
+    assert mock_coordinator.dr.async_get_devices.call_count == 1
 
     dev.async_as_scanner_init(ha_scanner)  # same object -> early return, no re-resolve
-    assert mock_coordinator.dr.devices.get_entries.call_count == 1
+    assert mock_coordinator.dr.async_get_devices.call_count == 1
 
 
 # --------------------------------------------------------------------------- #
@@ -91,7 +91,7 @@ def test_resolve_device_entries_entity_fallback_ignores_domain(mock_coordinator)
         name_by_user=None,
         connections={("bluetooth", "AA:BB:CC:DD:EE:FF")},
     )
-    mock_coordinator.dr.devices.get_entries.return_value = [bt_entry]
+    mock_coordinator.dr.async_get_devices.return_value = [bt_entry]
     mock_coordinator.er.entities.get_entries_for_device_id.return_value = [
         SimpleNamespace(domain="sensor", entity_id="sensor.foo")
     ]
